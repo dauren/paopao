@@ -507,13 +507,14 @@ class PaoPaoGame {
         
         // Если путь найден через L-образную проверку, рисуем его пошагово
         if (this.path && this.path.length > 0) {
-            // Проверяем, является ли это L-образным путем
-            const isLShape = this.isLShapePath();
-            if (isLShape) {
-                this.drawLShapePath();
-            } else {
-                this.drawPathThroughEmptyCells();
-            }
+            // // Проверяем, является ли это L-образным путем
+            // const isLShape = this.isLShapePath();
+            // if (isLShape) {
+            //     this.drawLShapePath();
+            // } else {
+            //     this.drawPathThroughEmptyCells();
+            // }
+            this.drawPathThroughEmptyCells();
         } else {
             // Если путь не найден, рисуем прямую линию между плитками
             this.drawDirectLine(tile1, tile2);
