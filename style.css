@@ -129,8 +129,8 @@ body {
 
 .game-board {
     /* Compact size for iPhone screens */
-    width: 440px; /* 11 columns × 40px tile width */
-    height: 900px;  /* 18 rows × 50px tile height */
+    width: 400px; /* 10 columns × 40px tile width */
+    height: 800px;  /* 16 rows × 50px tile height */
     background: transparent;
     padding: 0;
     margin: 0 auto 20px auto;
@@ -409,13 +409,16 @@ body {
     background: #4299e1;
     z-index: 10;
     pointer-events: none;
-    height: 2px;
+    height: 3px;
+    border-radius: 2px;
+    box-shadow: 0 0 4px rgba(66, 153, 225, 0.6);
 }
 
 /* Стили для путей через виртуальную доску */
 .path-line.behind-board {
     background: rgba(66, 153, 225, 0.6);
     z-index: 5;
+    box-shadow: 0 0 3px rgba(66, 153, 225, 0.4);
 }
 
 /* Telegram Mini App specific styles */
