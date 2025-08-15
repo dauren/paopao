@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PaoPao - Tile Game</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="game-container">
+        <div class="level-info">
+            <div class="current-level" id="currentLevel">Level 1: Beginning</div>
+            <div class="level-description" id="levelDescription">Simple level to get familiar with the game</div>
+        </div>
+        
+        <div class="game-info">
+            <div class="hearts-container">
+                <span class="hearts-label">❤️</span>
+                <span class="hearts" id="hearts">10</span>
+            </div>
+            
+            <div class="timer-container">
+                <div class="timer-bar">
+                    <div class="timer-progress" id="timerProgress"></div>
+                </div>
+                <span class="timer-value" id="timer">10:00</span>
+            </div>
+            
+            <div class="score-container">
+                <span class="score-value" id="score">0</span>
+            </div>
+        </div>
+        
+        <div class="game-board" id="gameBoard"></div>
+        
+        <div class="game-controls">
+            <div class="game-actions">
+                <button class="btn" id="newGameBtn">New Game</button>
+                <button class="btn" id="pauseBtn">Pause</button>
+                <button class="btn" id="restartBtn">Restart</button>
+                <button class="btn" id="soundBtn">🔊</button>
+                <button class="btn" id="hintBtn">Hint</button>
+                <button class="btn" id="solveBtn">Solve</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="game-overlay" id="gameOverlay">
+        <div class="game-overlay-content">
+            <h2 id="overlayTitle">Game Over</h2>
+            <p id="overlayMessage">Your result:</p>
+            <div class="final-score" id="finalScore">0</div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

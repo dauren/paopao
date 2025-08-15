@@ -1,0 +1,24 @@
+{
+  "bot_name": "PaoPao Game Bot",
+  "bot_username": "paopao_game_bot",
+  "web_app_url": "https://your-domain.com/paopao/",
+  "commands": [
+    {
+      "command": "start",
+      "description": "Start the PaoPao tile game"
+    },
+    {
+      "command": "play",
+      "description": "Play the game"
+    },
+    {
+      "command": "help",
+      "description": "Get help about the game"
+    }
+  ],
+  "web_app_info": {
+    "title": "PaoPao - Tile Game",
+    "description": "Match tiles and complete levels in this addictive puzzle game!",
+    "photo": "https://your-domain.com/paopao/logo.png"
+  }
+} 

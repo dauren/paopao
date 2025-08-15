@@ -1,0 +1,575 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #000000);
+    min-height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+.game-container {
+    max-width: 100vw;
+    width: 100%;
+    min-width: 320px;
+    margin: 0;
+    padding: 15px;
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #000000);
+    text-align: center;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+
+
+.level-info {
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.current-level {
+    font-size: 1.2rem;
+    color: var(--tg-theme-text-color, #2d3748);
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.level-description {
+    font-size: 0.9rem;
+    color: var(--tg-theme-hint-color, #718096);
+    font-style: italic;
+}
+
+.game-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+    margin-bottom: 15px;
+    padding: 12px 15px;
+    background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.05));
+    border-radius: 12px;
+    border: 1px solid var(--tg-theme-hint-color, rgba(0, 0, 0, 0.1));
+}
+
+.hearts-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #e53e3e, #c53030);
+    border-radius: 20px;
+    color: white;
+    font-weight: bold;
+    font-size: 1rem;
+    min-width: 70px;
+    justify-content: center;
+}
+
+.hearts-label {
+    font-size: 1rem;
+}
+
+.hearts {
+    font-weight: bold;
+}
+
+.timer-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    max-width: 200px;
+}
+
+.timer-bar {
+    flex: 1;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    overflow: hidden;
+    position: relative;
+}
+
+.timer-progress {
+    height: 100%;
+    background: linear-gradient(90deg, #48bb78, #38a169, #2f855a);
+    border-radius: 5px;
+    transition: width 1s ease;
+    width: 100%;
+}
+
+.timer-value {
+    color: white;
+    font-weight: bold;
+    font-size: 1rem;
+    min-width: 50px;
+    text-align: center;
+}
+
+.score-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 15px;
+    background: linear-gradient(135deg, #4299e1, #3182ce);
+    border-radius: 20px;
+    color: white;
+    font-weight: bold;
+    font-size: 1.1rem;
+    min-width: 70px;
+}
+
+.game-board {
+    /* Compact size for iPhone screens */
+    width: 440px; /* 11 columns × 40px tile width */
+    height: 900px;  /* 18 rows × 50px tile height */
+    background: transparent;
+    padding: 0;
+    margin: 0 auto 20px auto;
+    box-shadow: none;
+    position: relative;
+    font-size: 0;
+    line-height: 0;
+    overflow: hidden;
+}
+
+.tile {
+    /* Compact tiles for mobile */
+    width: 40px;
+    height: 50px;
+    background: white;
+    border: 1px solid #cbd5e0;
+    border-radius: 0;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: absolute;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    line-height: 0;
+    font-size: 0;
+}
+
+.tile.empty {
+    background: transparent; /* Прозрачный фон для пустых клеток, чтобы показать background */
+    border: 1px dashed #cbd5e0; /* Пунктирная граница для пустых клеток */
+    cursor: default; /* Нельзя кликать по пустым клеткам */
+}
+
+.tile.empty img {
+    display: none; /* Скрываем изображение в пустых клетках */
+}
+
+.tile:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.tile.empty:hover {
+    transform: none; /* Убираем эффект hover для пустых клеток */
+    box-shadow: none;
+}
+
+.tile.selected {
+    border-color: #4299e1;
+    box-shadow: 0 0 20px rgba(66, 153, 225, 0.6);
+    transform: scale(1.1);
+}
+
+.tile.matched {
+    opacity: 0.3;
+    pointer-events: none;
+    transform: scale(0.9);
+}
+
+.tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0; /* Убрали скругление для плотного прилегания */
+    display: block; /* Убираем inline spacing */
+    margin: 0; /* Убираем отступы */
+    padding: 0; /* Убираем внутренние отступы */
+    vertical-align: top; /* Убираем vertical alignment issues */
+}
+
+.game-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    align-items: center;
+}
+
+.level-navigation {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.level-nav-btn {
+    margin: 3px;
+}
+
+.level-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 15px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.level-grid .btn {
+    padding: 8px;
+    font-size: 0.8rem;
+    text-transform: none;
+    letter-spacing: normal;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+}
+
+.level-grid .btn div:first-child {
+    font-weight: bold;
+    margin-bottom: 3px;
+}
+
+.level-grid .btn div:nth-child(2) {
+    font-size: 0.7rem;
+    margin-bottom: 2px;
+}
+
+.level-grid .btn div:last-child {
+    font-size: 0.6rem;
+    opacity: 0.8;
+}
+
+.game-actions {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.btn {
+    padding: 12px 20px;
+    font-size: 0.9rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.btn-primary {
+    background: var(--tg-theme-button-color, #2481cc);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    border: none;
+}
+
+.btn-primary:hover {
+    background: var(--tg-theme-button-color, #1a6aa8);
+}
+
+.btn-secondary {
+    background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+    color: var(--tg-theme-text-color, #000000);
+    border: 1px solid var(--tg-theme-hint-color, #999999);
+}
+
+.btn-secondary:hover {
+    background: var(--tg-theme-hint-color, #e0e0e0);
+}
+
+.btn-sound {
+    background: var(--tg-theme-button-color, #2481cc);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    padding: 12px;
+    min-width: 50px;
+    border: none;
+}
+
+.btn-sound:hover {
+    background: var(--tg-theme-button-color, #1a6aa8);
+}
+
+.btn-sound.muted {
+    background: var(--tg-theme-hint-color, #999999);
+}
+
+.sound-icon {
+    font-size: 1.2rem;
+}
+
+.game-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    backdrop-filter: blur(5px);
+}
+
+.game-overlay.show {
+    display: flex;
+}
+
+.overlay-content {
+    background: var(--tg-theme-bg-color, #ffffff);
+    color: var(--tg-theme-text-color, #000000);
+    padding: 25px;
+    border-radius: 15px;
+    text-align: center;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    animation: slideIn 0.35s ease-out;
+    max-width: 90vw;
+    margin: 20px;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeOutUp {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -50%);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -100%);
+    }
+}
+
+.shuffle-penalty, .heart-reward {
+    pointer-events: none;
+    user-select: none;
+}
+
+.no-hearts-warning {
+    pointer-events: none;
+    user-select: none;
+    background: rgba(229, 62, 62, 0.1);
+    padding: 10px 20px;
+    border-radius: 10px;
+    border: 2px solid #e53e3e;
+}
+
+.overlay-content h2 {
+    font-size: 2rem;
+    color: var(--tg-theme-text-color, #4a5568);
+    margin-bottom: 15px;
+}
+
+.overlay-content p {
+    font-size: 1.1rem;
+    color: var(--tg-theme-hint-color, #718096);
+    margin-bottom: 20px;
+}
+
+#finalScore {
+    font-weight: bold;
+    color: var(--tg-theme-button-color, #2481cc);
+    font-size: 1.3rem;
+}
+
+.path-line {
+    position: absolute;
+    background: #4299e1;
+    z-index: 10;
+    pointer-events: none;
+    height: 2px;
+}
+
+/* Стили для путей через виртуальную доску */
+.path-line.behind-board {
+    background: rgba(66, 153, 225, 0.6);
+    z-index: 5;
+}
+
+/* Telegram Mini App specific styles */
+.telegram-app {
+    --tg-theme-bg-color: #ffffff;
+    --tg-theme-text-color: #000000;
+    --tg-theme-hint-color: #999999;
+    --tg-theme-link-color: #2481cc;
+    --tg-theme-button-color: #2481cc;
+    --tg-theme-button-text-color: #ffffff;
+    --tg-theme-secondary-bg-color: #f0f0f0;
+}
+
+/* Message styles for Telegram */
+.message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    border-radius: 8px;
+    z-index: 1001;
+    font-size: 14px;
+    font-weight: 500;
+    max-width: 80vw;
+    text-align: center;
+}
+
+.message-success {
+    background: var(--tg-theme-button-color, #28a745);
+    color: var(--tg-theme-button-text-color, #ffffff);
+}
+
+.message-error {
+    background: #dc3545;
+    color: #ffffff;
+}
+
+.message-info {
+    background: var(--tg-theme-button-color, #17a2b8);
+    color: var(--tg-theme-button-text-color, #ffffff);
+}
+
+/* Telegram back button integration */
+.telegram-back-button {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+    background: var(--tg-theme-button-color, #2481cc);
+    color: var(--tg-theme-button-text-color, #ffffff);
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    display: none;
+}
+
+.telegram-back-button.show {
+    display: block;
+}
+
+.tile.virtual-tile {
+    /* Стили для пустых ячеек в виртуальных областях (вне 9×16) */
+    opacity: 0.1; /* Очень прозрачные */
+    pointer-events: none; /* Нельзя кликать */
+    border: 1px dotted #cbd5e0; /* Точки для пустых ячеек */
+    background: rgba(203, 213, 224, 0.05); /* Очень легкий фон */
+}
+
+.tile.virtual-tile img {
+    display: none; /* Скрываем изображения в виртуальных ячейках */
+}
+
+.tile.virtual-tile.empty {
+    /* Пустые виртуальные ячейки для pathfinding */
+    background: rgba(203, 213, 224, 0.1);
+    border: 1px dotted #94a3b8;
+}
+
+@media (max-width: 1200px) {
+    .game-container {
+        padding: 15px;
+        margin: 15px;
+    }
+    
+    .game-header h1 {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .game-container {
+        padding: 10px;
+        margin: 5px;
+        border-radius: 10px;
+    }
+    
+    .game-header h1 {
+        font-size: 1.8rem;
+        margin-bottom: 10px;
+    }
+    
+    .current-level {
+        font-size: 1.1rem;
+    }
+    
+    .level-description {
+        font-size: 0.8rem;
+    }
+    
+    .game-controls {
+        gap: 12px;
+    }
+    
+    .game-actions {
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .btn {
+        padding: 10px 15px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .game-container {
+        padding: 8px;
+        margin: 2px;
+    }
+    
+    .game-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .game-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .hearts-container,
+    .score-container {
+        min-width: 60px;
+        font-size: 0.9rem;
+    }
+    
+    .timer-container {
+        max-width: 150px;
+    }
+    
+    
+    .level-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
