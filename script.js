@@ -243,7 +243,8 @@ class PaoPaoGame {
                 tileElement.dataset.row = r; // координаты в полной сетке
                 tileElement.dataset.col = c;
                 
-                // Координаты относительно полной доски 10x16
+                // Координаты относительно полной доски 
+                // 10x16
                 const left = c * tileWidth;
                 const top = r * tileHeight;
                 
@@ -359,7 +360,7 @@ class PaoPaoGame {
         return (rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1);
     }
     
-    // Поиск в ширину (BFS) по полной сетке 18x11 с улучшенной обработкой L-образных путей
+    // Поиск в ширину (BFS) по полной сетке 10x16 с улучшенной обработкой L-образных путей
     findPathBFS(tile1, tile2) {
         if (tile1.id !== tile2.id) return false;
         
@@ -390,7 +391,7 @@ class PaoPaoGame {
                 const newCol = current.col + dir.col;
                 const key = `${newRow},${newCol}`;
                 
-                // 1) Проверка границ 18x11
+                // 1) Проверка границ 10x16
                 if (!this.isInsideFullGrid(newRow, newCol)) continue;
                 
                 // 2) Уже посещали
@@ -556,7 +557,7 @@ class PaoPaoGame {
         return hasHorizontal && hasVertical;
     }
     
-    // Рисуем путь через пустые клетки (теперь для полной доски 18x11, строго по сетке)
+    // Рисуем путь через пустые клетки (теперь для полной доски 10x16, строго по сетке)
     drawPathThroughEmptyCells() {
         const gameBoard = document.getElementById('gameBoard');
         
@@ -1149,6 +1150,31 @@ class PaoPaoGame {
     }
     
     setupEventListeners() {
+        // Prevent double-click zoom
+        document.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        // Prevent touch zoom
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        document.addEventListener('gesturestart', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('gesturechange', (e) => {
+            e.preventDefault();
+        });
+        
+        document.addEventListener('gestureend', (e) => {
+            e.preventDefault();
+        });
+        
         // Обработчики событий для кнопок
         const newGameBtn = document.getElementById('newGameBtn');
         if (newGameBtn) newGameBtn.addEventListener('click', () => this.newGame());

@@ -13,6 +13,14 @@ body {
     overflow: hidden;
     height: 100vh;
     width: 100vw;
+    /* Prevent zoom on double tap */
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .game-container {
