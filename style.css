@@ -51,6 +51,8 @@ body {
     border: 1px solid var(--tg-theme-hint-color, rgba(0, 0, 0, 0.1));
     flex-shrink: 0;
     height: 50px;
+    flex-direction: row;
+    flex-wrap: nowrap;
 }
 
 .hearts-container {
@@ -82,6 +84,8 @@ body {
     gap: 8px;
     flex: 1;
     max-width: 180px;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .timer-bar {
@@ -91,6 +95,8 @@ body {
     border-radius: 4px;
     overflow: hidden;
     position: relative;
+    min-width: 0;
+    flex-shrink: 1;
 }
 
 .timer-progress {
@@ -528,12 +534,38 @@ body {
         border-radius: 0;
     }
     
-    .current-level {
-        font-size: 1rem;
+    .game-info {
+        gap: 6px;
+        padding: 6px 8px;
+        height: 45px;
     }
     
-    .level-description {
+    .hearts-container {
+        min-width: 50px;
+        height: 28px;
         font-size: 0.8rem;
+        padding: 3px 6px;
+    }
+    
+    .timer-container {
+        max-width: 140px;
+        gap: 6px;
+    }
+    
+    .timer-bar {
+        height: 6px;
+    }
+    
+    .timer-value {
+        font-size: 0.8rem;
+        min-width: 40px;
+    }
+    
+    .score-container {
+        min-width: 50px;
+        height: 28px;
+        font-size: 0.9rem;
+        padding: 3px 8px;
     }
     
     .game-controls {
@@ -568,13 +600,13 @@ body {
         margin: 2px;
     }
     
-    .game-header h1 {
-        font-size: 1.5rem;
-    }
+
     
     .game-info {
-        flex-direction: column;
-        gap: 10px;
+        flex-direction: row;
+        gap: 4px;
+        padding: 4px 6px;
+        height: 40px;
     }
     
     .hearts-container,
