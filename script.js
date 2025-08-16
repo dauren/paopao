@@ -105,8 +105,13 @@ class PaoPaoGame {
     
     // Haptic feedback for matched tiles
     triggerHapticFeedback() {
-        // Check if haptic feedback is supported
-        if ('vibrate' in navigator) {
+        // Telegram Web App HapticFeedback API (Bot API 6.1+)
+        if (tg && tg.HapticFeedback) {
+            // Use success notification for matched tiles
+            tg.HapticFeedback.notificationOccurred('success');
+        }
+        // Fallback to native haptic feedback
+        else if ('vibrate' in navigator) {
             // Short vibration for tile match
             navigator.vibrate(50);
         }
@@ -119,6 +124,81 @@ class PaoPaoGame {
         // For Android WebView
         if (window.Android && window.Android.vibrate) {
             window.Android.vibrate(50);
+        }
+    }
+    
+    // Haptic feedback for tile selection
+    triggerSelectionHapticFeedback() {
+        // Telegram Web App HapticFeedback API (Bot API 6.1+)
+        if (tg && tg.HapticFeedback) {
+            // Use selection changed for tile selection
+            tg.HapticFeedback.selectionChanged();
+        }
+        // Fallback to light impact for selection
+        else if (tg && tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('light');
+        }
+        // Fallback to native haptic feedback
+        else if ('vibrate' in navigator) {
+            // Very short vibration for selection
+            navigator.vibrate(25);
+        }
+    }
+    
+    // Haptic feedback for wrong moves
+    triggerWrongMoveHapticFeedback() {
+        // Telegram Web App HapticFeedback API (Bot API 6.1+)
+        if (tg && tg.HapticFeedback) {
+            // Use error notification for wrong moves
+            tg.HapticFeedback.notificationOccurred('error');
+        }
+        // Fallback to heavy impact for wrong moves
+        else if (tg && tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred('heavy');
+        }
+        // Fallback to native haptic feedback
+        else if ('vibrate' in navigator) {
+            // Longer vibration for wrong moves
+            navigator.vibrate(100);
+        }
+    }
+    
+    // Haptic feedback for game events
+    triggerGameEventHapticFeedback(eventType) {
+        // Telegram Web App HapticFeedback API (Bot API 6.1+)
+        if (tg && tg.HapticFeedback) {
+            switch (eventType) {
+                case 'level_complete':
+                    tg.HapticFeedback.notificationOccurred('success');
+                    break;
+                case 'game_over':
+                    tg.HapticFeedback.notificationOccurred('error');
+                    break;
+                case 'button_press':
+                    tg.HapticFeedback.impactOccurred('light');
+                    break;
+                case 'shuffle':
+                    tg.HapticFeedback.impactOccurred('medium');
+                    break;
+                case 'hint':
+                    tg.HapticFeedback.impactOccurred('soft');
+                    break;
+                default:
+                    tg.HapticFeedback.impactOccurred('light');
+            }
+        }
+        // Fallback to native haptic feedback
+        else if ('vibrate' in navigator) {
+            switch (eventType) {
+                case 'level_complete':
+                    navigator.vibrate([50, 100, 50]); // Success pattern
+                    break;
+                case 'game_over':
+                    navigator.vibrate([100, 200, 100]); // Error pattern
+                    break;
+                default:
+                    navigator.vibrate(25); // Default light feedback
+            }
         }
     }
     
@@ -361,6 +441,8 @@ class PaoPaoGame {
         if (!this.selectedTile) {
             this.selectedTile = tile;
             tile.element.classList.add('selected');
+            // Haptic feedback for tile selection
+            this.triggerSelectionHapticFeedback();
             console.log('First tile selected:', tile.id);
         } else if (this.selectedTile === tile) {
             this.selectedTile.element.classList.remove('selected');
@@ -374,12 +456,16 @@ class PaoPaoGame {
             } else {
                 console.log('Connection failed');
                 this.showConnectionError();
+                // Haptic feedback for wrong move
+                this.triggerWrongMoveHapticFeedback();
             }
         } else {
             console.log('Different tile type, switching selection');
             this.selectedTile.element.classList.remove('selected');
             this.selectedTile = tile;
             tile.element.classList.add('selected');
+            // Haptic feedback for tile selection change
+            this.triggerSelectionHapticFeedback();
         }
     }
     
@@ -1209,16 +1295,28 @@ class PaoPaoGame {
         
         // Обработчики событий для кнопок
         const newGameBtn = document.getElementById('newGameBtn');
-        if (newGameBtn) newGameBtn.addEventListener('click', () => this.newGame());
+        if (newGameBtn) newGameBtn.addEventListener('click', () => {
+            this.triggerGameEventHapticFeedback('button_press');
+            this.newGame();
+        });
         
         const pauseBtn = document.getElementById('pauseBtn');
-        if (pauseBtn) pauseBtn.addEventListener('click', () => this.pauseGame());
+        if (pauseBtn) pauseBtn.addEventListener('click', () => {
+            this.triggerGameEventHapticFeedback('button_press');
+            this.pauseGame();
+        });
         
         const soundBtn = document.getElementById('soundBtn');
-        if (soundBtn) soundBtn.addEventListener('click', () => this.toggleSound());
+        if (soundBtn) soundBtn.addEventListener('click', () => {
+            this.triggerGameEventHapticFeedback('button_press');
+            this.toggleSound();
+        });
         
         const hintBtn = document.getElementById('hintBtn');
-        if (hintBtn) hintBtn.addEventListener('click', () => this.hintConnectAnyPair());
+        if (hintBtn) hintBtn.addEventListener('click', () => {
+            this.triggerGameEventHapticFeedback('hint');
+            this.hintConnectAnyPair();
+        });
  
         // Добавляем обработчик изменения размера окна
         window.addEventListener('resize', () => {
