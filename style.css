@@ -37,44 +37,35 @@ body {
     flex-shrink: 0;
 }
 
-.current-level {
-    font-size: 1.2rem;
-    color: var(--tg-theme-text-color, #2d3748);
-    font-weight: 600;
-    margin-bottom: 5px;
-}
 
-.level-description {
-    font-size: 0.9rem;
-    color: var(--tg-theme-hint-color, #718096);
-    font-style: italic;
-}
 
 .game-info {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 15px;
-    margin-bottom: 10px;
-    padding: 10px 12px;
+    gap: 10px;
+    margin-bottom: 8px;
+    padding: 8px 12px;
     background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.05));
-    border-radius: 12px;
+    border-radius: 10px;
     border: 1px solid var(--tg-theme-hint-color, rgba(0, 0, 0, 0.1));
     flex-shrink: 0;
+    height: 50px;
 }
 
 .hearts-container {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 12px;
+    gap: 4px;
+    padding: 4px 8px;
     background: linear-gradient(135deg, #e53e3e, #c53030);
-    border-radius: 20px;
+    border-radius: 15px;
     color: white;
     font-weight: bold;
-    font-size: 1rem;
-    min-width: 70px;
+    font-size: 0.9rem;
+    min-width: 60px;
     justify-content: center;
+    height: 32px;
 }
 
 .hearts-label {
@@ -88,16 +79,16 @@ body {
 .timer-container {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex: 1;
-    max-width: 200px;
+    max-width: 180px;
 }
 
 .timer-bar {
     flex: 1;
-    height: 10px;
+    height: 8px;
     background: rgba(255, 255, 255, 0.2);
-    border-radius: 5px;
+    border-radius: 4px;
     overflow: hidden;
     position: relative;
 }
@@ -105,7 +96,7 @@ body {
 .timer-progress {
     height: 100%;
     background: linear-gradient(90deg, #48bb78, #38a169, #2f855a);
-    border-radius: 5px;
+    border-radius: 4px;
     transition: width 1s ease;
     width: 100%;
 }
@@ -113,8 +104,8 @@ body {
 .timer-value {
     color: white;
     font-weight: bold;
-    font-size: 1rem;
-    min-width: 50px;
+    font-size: 0.9rem;
+    min-width: 45px;
     text-align: center;
 }
 
@@ -122,13 +113,14 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 6px 15px;
+    padding: 4px 10px;
     background: linear-gradient(135deg, #4299e1, #3182ce);
-    border-radius: 20px;
+    border-radius: 15px;
     color: white;
     font-weight: bold;
-    font-size: 1.1rem;
-    min-width: 70px;
+    font-size: 1rem;
+    min-width: 60px;
+    height: 32px;
 }
 
 .game-board {
@@ -137,7 +129,7 @@ body {
     height: min(80vh, 900px); /* Responsive height with max of 900px */
     background: transparent;
     padding: 0;
-    margin: 0 auto 15px auto;
+    margin: 0 auto 10px auto;
     box-shadow: none;
     position: relative;
     font-size: 0;
@@ -215,8 +207,10 @@ body {
     flex-direction: column;
     gap: 10px;
     align-items: center;
+    justify-content: center;
     margin-top: auto;
     padding-bottom: 10px;
+    width: 100%;
 }
 
 .level-navigation {
@@ -273,6 +267,8 @@ body {
     align-items: center;
     flex-wrap: wrap;
     justify-content: center;
+    width: 100%;
+    max-width: 400px;
 }
 
 .btn {
@@ -290,6 +286,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .btn-primary {
@@ -541,11 +538,15 @@ body {
     
     .game-controls {
         gap: 8px;
+        width: 100%;
     }
     
     .game-actions {
         flex-wrap: wrap;
         gap: 6px;
+        width: 100%;
+        max-width: 350px;
+        justify-content: center;
     }
     
     .btn {
