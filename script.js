@@ -1090,6 +1090,13 @@ class PaoPaoGame {
     pauseGame() {
         if (this.isGameOver) return;
         
+        // Show confirmation dialog when pausing
+        if (!this.isPaused) {
+            if (!confirm('Are you sure you want to pause the game?')) {
+                return; // User cancelled
+            }
+        }
+        
         this.isPaused = !this.isPaused;
         const pauseBtn = document.getElementById('pauseBtn');
         
@@ -1113,6 +1120,13 @@ class PaoPaoGame {
     }
     
     newGame() {
+        // Show confirmation dialog if game is in progress
+        if (!this.isGameOver && !this.isPaused) {
+            if (!confirm('Are you sure you want to start a new game? Current progress will be lost.')) {
+                return; // User cancelled
+            }
+        }
+        
         // Сбрасываем состояние игры
         this.score = 0;
         this.timeLeft = this.getCurrentLevel().timeLimit;
