@@ -125,13 +125,14 @@ class PaoPaoGame {
     toggleSound() {
         this.soundEnabled = !this.soundEnabled;
         const soundBtn = document.getElementById('soundBtn');
-        const soundIcon = soundBtn.querySelector('.sound-icon');
         
         if (this.soundEnabled) {
-            soundIcon.textContent = '🔊';
+            soundBtn.textContent = '🔊';
+            soundBtn.title = 'Sound On';
             soundBtn.classList.remove('muted');
         } else {
-            soundIcon.textContent = '🔇';
+            soundBtn.textContent = '🔇';
+            soundBtn.title = 'Sound Off';
             soundBtn.classList.add('muted');
         }
     }
@@ -908,6 +909,43 @@ class PaoPaoGame {
         }
     }
     
+    // Toggle fullscreen mode
+    toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            // Enter fullscreen
+            if (document.documentElement.requestFullscreen) {
+                document.documentElement.requestFullscreen();
+            } else if (document.documentElement.webkitRequestFullscreen) {
+                document.documentElement.webkitRequestFullscreen();
+            } else if (document.documentElement.msRequestFullscreen) {
+                document.documentElement.msRequestFullscreen();
+            }
+        } else {
+            // Exit fullscreen
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+    }
+    
+    // Update fullscreen button icon
+    updateFullscreenButton() {
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        if (fullscreenBtn) {
+            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+                fullscreenBtn.textContent = '⛶';
+                fullscreenBtn.title = 'Exit Fullscreen';
+            } else {
+                fullscreenBtn.textContent = '⛶';
+                fullscreenBtn.title = 'Enter Fullscreen';
+            }
+        }
+    }
+    
     showHeartReward() {
         const gameBoard = document.getElementById('gameBoard');
         const rewardMsg = document.createElement('div');
@@ -1035,11 +1073,13 @@ class PaoPaoGame {
         this.playSound('pause');
         
         if (this.isPaused) {
-            pauseBtn.textContent = 'Продолжить';
+            pauseBtn.textContent = '▶️';
+            pauseBtn.title = 'Resume';
             pauseBtn.classList.remove('btn-secondary');
             pauseBtn.classList.add('btn-primary');
         } else {
-            pauseBtn.textContent = 'Пауза';
+            pauseBtn.textContent = '⏸️';
+            pauseBtn.title = 'Pause';
             pauseBtn.classList.remove('btn-primary');
             pauseBtn.classList.add('btn-secondary');
         }
@@ -1104,6 +1144,12 @@ class PaoPaoGame {
         
         const solveBtn = document.getElementById('solveBtn');
         if (solveBtn) solveBtn.addEventListener('click', () => this.solveLevelFast());
+        
+        // Add fullscreen button event listener
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', this.toggleFullscreen.bind(this));
+        }
  
         // Добавляем обработчик изменения размера окна
         window.addEventListener('resize', () => {
@@ -1111,6 +1157,11 @@ class PaoPaoGame {
                 this.renderBoard();
             }
         });
+        
+        // Add fullscreen change event listener
+        document.addEventListener('fullscreenchange', this.updateFullscreenButton.bind(this));
+        document.addEventListener('webkitfullscreenchange', this.updateFullscreenButton.bind(this));
+        document.addEventListener('msfullscreenchange', this.updateFullscreenButton.bind(this));
     }
     
     // Найти любую соединяемую пару и соединить её

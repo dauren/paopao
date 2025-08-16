@@ -8,30 +8,33 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background: var(--tg-theme-bg-color, #ffffff);
     color: var(--tg-theme-text-color, #000000);
-    min-height: 100vh;
     margin: 0;
     padding: 0;
-    overflow-x: hidden;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
 }
 
 .game-container {
-    max-width: 100vw;
-    width: 100%;
-    min-width: 320px;
+    width: 100vw;
+    height: 100vh;
     margin: 0;
-    padding: 15px;
+    padding: 10px;
     background: var(--tg-theme-bg-color, #ffffff);
     color: var(--tg-theme-text-color, #000000);
     text-align: center;
-    min-height: 100vh;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 
 
 .level-info {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     text-align: center;
+    flex-shrink: 0;
 }
 
 .current-level {
@@ -52,11 +55,12 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 15px;
-    margin-bottom: 15px;
-    padding: 12px 15px;
+    margin-bottom: 10px;
+    padding: 10px 12px;
     background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.05));
     border-radius: 12px;
     border: 1px solid var(--tg-theme-hint-color, rgba(0, 0, 0, 0.1));
+    flex-shrink: 0;
 }
 
 .hearts-container {
@@ -128,17 +132,18 @@ body {
 }
 
 .game-board {
-    /* Compact size for iPhone screens */
-    width: 400px; /* 10 columns × 40px tile width */
-    height: 800px;  /* 16 rows × 50px tile height */
+    /* Responsive size that adapts to window */
+    width: min(90vw, 440px); /* Responsive width with max of 440px */
+    height: min(80vh, 900px); /* Responsive height with max of 900px */
     background: transparent;
     padding: 0;
-    margin: 0 auto 20px auto;
+    margin: 0 auto 15px auto;
     box-shadow: none;
     position: relative;
     font-size: 0;
     line-height: 0;
     overflow: hidden;
+    flex: 1;
 }
 
 .tile {
@@ -208,8 +213,10 @@ body {
 .game-controls {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 10px;
     align-items: center;
+    margin-top: auto;
+    padding-bottom: 10px;
 }
 
 .level-navigation {
@@ -262,15 +269,15 @@ body {
 
 .game-actions {
     display: flex;
-    gap: 15px;
+    gap: 8px;
     align-items: center;
     flex-wrap: wrap;
     justify-content: center;
 }
 
 .btn {
-    padding: 12px 20px;
-    font-size: 0.9rem;
+    padding: 8px;
+    font-size: 1.2rem;
     border: none;
     border-radius: 8px;
     cursor: pointer;
@@ -278,6 +285,11 @@ body {
     font-weight: 500;
     text-transform: none;
     letter-spacing: normal;
+    min-width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-primary {
@@ -303,8 +315,9 @@ body {
 .btn-sound {
     background: var(--tg-theme-button-color, #2481cc);
     color: var(--tg-theme-button-text-color, #ffffff);
-    padding: 12px;
-    min-width: 50px;
+    padding: 8px;
+    min-width: 40px;
+    height: 40px;
     border: none;
 }
 
@@ -513,18 +526,13 @@ body {
 
 @media (max-width: 768px) {
     .game-container {
-        padding: 10px;
-        margin: 5px;
-        border-radius: 10px;
-    }
-    
-    .game-header h1 {
-        font-size: 1.8rem;
-        margin-bottom: 10px;
+        padding: 8px;
+        margin: 0;
+        border-radius: 0;
     }
     
     .current-level {
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
     
     .level-description {
@@ -532,17 +540,24 @@ body {
     }
     
     .game-controls {
-        gap: 12px;
+        gap: 8px;
     }
     
     .game-actions {
         flex-wrap: wrap;
-        gap: 10px;
+        gap: 6px;
     }
     
     .btn {
-        padding: 10px 15px;
-        font-size: 0.8rem;
+        padding: 6px;
+        font-size: 1rem;
+        min-width: 36px;
+        height: 36px;
+    }
+    
+    .game-board {
+        width: min(95vw, 400px);
+        height: min(85vh, 800px);
     }
 }
 
