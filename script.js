@@ -933,42 +933,7 @@ class PaoPaoGame {
         }
     }
     
-    // Toggle fullscreen mode
-    toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            // Enter fullscreen
-            if (document.documentElement.requestFullscreen) {
-                document.documentElement.requestFullscreen();
-            } else if (document.documentElement.webkitRequestFullscreen) {
-                document.documentElement.webkitRequestFullscreen();
-            } else if (document.documentElement.msRequestFullscreen) {
-                document.documentElement.msRequestFullscreen();
-            }
-        } else {
-            // Exit fullscreen
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
-        }
-    }
-    
-    // Update fullscreen button icon
-    updateFullscreenButton() {
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
-        if (fullscreenBtn) {
-            if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
-                fullscreenBtn.textContent = '⛶';
-                fullscreenBtn.title = 'Exit Fullscreen';
-            } else {
-                fullscreenBtn.textContent = '⛶';
-                fullscreenBtn.title = 'Enter Fullscreen';
-            }
-        }
-    }
+
     
     showHeartReward() {
         const gameBoard = document.getElementById('gameBoard');
@@ -1159,9 +1124,7 @@ class PaoPaoGame {
         this.playSound('shuffle');
     }
     
-    restartLevel() {
-        this.newGame();
-    }
+
     
     setupEventListeners() {
         // Prevent double-click zoom
@@ -1194,25 +1157,13 @@ class PaoPaoGame {
         if (newGameBtn) newGameBtn.addEventListener('click', () => this.newGame());
         
         const pauseBtn = document.getElementById('pauseBtn');
-        if (pauseBtn) pauseBtn.addEventListener('click', () => this.togglePause());
-        
-        const restartBtn = document.getElementById('restartBtn');
-        if (restartBtn) restartBtn.addEventListener('click', () => this.restartLevel());
+        if (pauseBtn) pauseBtn.addEventListener('click', () => this.pauseGame());
         
         const soundBtn = document.getElementById('soundBtn');
         if (soundBtn) soundBtn.addEventListener('click', () => this.toggleSound());
         
         const hintBtn = document.getElementById('hintBtn');
         if (hintBtn) hintBtn.addEventListener('click', () => this.hintConnectAnyPair());
-        
-        const solveBtn = document.getElementById('solveBtn');
-        if (solveBtn) solveBtn.addEventListener('click', () => this.solveLevelFast());
-        
-        // Add fullscreen button event listener
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
-        if (fullscreenBtn) {
-            fullscreenBtn.addEventListener('click', this.toggleFullscreen.bind(this));
-        }
  
         // Добавляем обработчик изменения размера окна
         window.addEventListener('resize', () => {
@@ -1221,10 +1172,7 @@ class PaoPaoGame {
             }
         });
         
-        // Add fullscreen change event listener
-        document.addEventListener('fullscreenchange', this.updateFullscreenButton.bind(this));
-        document.addEventListener('webkitfullscreenchange', this.updateFullscreenButton.bind(this));
-        document.addEventListener('msfullscreenchange', this.updateFullscreenButton.bind(this));
+
     }
     
     // Найти любую соединяемую пару и соединить её
@@ -1413,20 +1361,7 @@ class PaoPaoGame {
         setTimeout(step, stepDelay);
     }
 
-    // Быстрое автоматическое решение уровня: жмет подсказку, пока на поле есть пары
-    solveLevelFast() {
-        if (this.isGameOver || this.isPaused || this.isShuffling) return;
-        // Пытаемся находить и соединять пары максимально быстро
-        let progressed = true;
-        while (progressed && !this.isGameOver) {
-            progressed = this.hintConnectAnyPair();
-            if (!progressed) {
-                // Если нет хода — автоматически перемешать до появления
-                if (!this.ensureAnyMoveExists()) break;
-                progressed = this.hintConnectAnyPair();
-            }
-        }
-    }
+
 
     createLevels() {
         return [
