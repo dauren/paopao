@@ -120,7 +120,7 @@ body {
 }
 
 .timer-value {
-    color: white;
+    color: #000000;
     font-weight: bold;
     font-size: 0.9rem;
     min-width: 45px;
@@ -174,7 +174,7 @@ body {
     }
     
     .game-controls {
-        margin-bottom: 12px;
+        margin-bottom: 0px;
     }
 }
 
@@ -248,7 +248,7 @@ body {
     gap: 10px;
     align-items: center;
     justify-content: center;
-    margin-bottom: 15px;
+    margin-bottom: 0px;
     padding-bottom: 10px;
     width: 100%;
     max-width: 500px;
