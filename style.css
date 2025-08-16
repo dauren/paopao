@@ -152,8 +152,8 @@ body {
 /* Responsive tile sizing */
 @media (max-width: 931px) {
     .game-board {
-        width: min(95vw, 320px); /* 10 columns × 32px */
-        height: min(85vh, 640px); /* 16 rows × 40px */
+        width: min(95vw, 360px); /* 10 columns × 36px */
+        height: min(85vh, 720px); /* 16 rows × 45px */
     }
     
     .game-info,
@@ -627,8 +627,8 @@ body {
     }
     
     .game-board {
-        width: min(95vw, 320px); /* 10 columns × 32px for small screens */
-        height: min(85vh, 640px); /* 16 rows × 40px for small screens */
+        width: min(95vw, 360px); /* 10 columns × 36px for small screens */
+        height: min(85vh, 720px); /* 16 rows × 45px for small screens */
     }
 }
 

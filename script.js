@@ -224,15 +224,15 @@ class PaoPaoGame {
         // Responsive tile sizing based on screen width
         let tileWidth, tileHeight;
         if (window.innerWidth < 932) {
-            tileWidth = 32; // Smaller tiles for small screens
-            tileHeight = 40;
+            tileWidth = 36; // Larger tiles for small screens (was 32)
+            tileHeight = 45; // Larger tiles for small screens (was 40)
         } else {
             tileWidth = 40; // Standard tiles for larger screens
             tileHeight = 50;
         }
         
         
-        // Рендерим полную доску 18x11 (включая виртуальные области)
+        // Рендерим полную доску 10x16 (включая виртуальные области)
         for (let r = 0; r < this.boardSize.rows; r++) {
             for (let c = 0; c < this.boardSize.cols; c++) {
                 const tile = this.board[r][c];
@@ -243,7 +243,7 @@ class PaoPaoGame {
                 tileElement.dataset.row = r; // координаты в полной сетке
                 tileElement.dataset.col = c;
                 
-                // Координаты относительно полной доски 18x11
+                // Координаты относительно полной доски 10x16
                 const left = c * tileWidth;
                 const top = r * tileHeight;
                 
@@ -563,8 +563,8 @@ class PaoPaoGame {
         // Responsive tile sizing based on screen width
         let tileWidth, tileHeight;
         if (window.innerWidth < 932) {
-            tileWidth = 32; // Smaller tiles for small screens
-            tileHeight = 40;
+            tileWidth = 36; // Larger tiles for small screens (was 32)
+            tileHeight = 45; // Larger tiles for small screens (was 40)
         } else {
             tileWidth = 40; // Standard tiles for larger screens
             tileHeight = 50;
@@ -602,15 +602,15 @@ class PaoPaoGame {
         // Responsive tile sizing based on screen width
         let tileWidth, tileHeight;
         if (window.innerWidth < 932) {
-            tileWidth = 32; // Smaller tiles for small screens
-            tileHeight = 40;
+            tileWidth = 36; // Larger tiles for small screens (was 32)
+            tileHeight = 45; // Larger tiles for small screens (was 40)
         } else {
             tileWidth = 40; // Standard tiles for larger screens
             tileHeight = 50;
         }
         
         const toPixel = (row, col) => {
-            // Теперь используем координаты полной доски 18x11
+            // Теперь используем координаты полной доски 10x16
             const x = col * tileWidth + tileWidth / 2;
             const y = row * tileHeight + tileHeight / 2;
             return { x, y };
@@ -708,8 +708,8 @@ class PaoPaoGame {
         // Responsive tile sizing based on screen width
         let tileWidth, tileHeight;
         if (window.innerWidth < 932) {
-            tileWidth = 32; // Smaller tiles for small screens
-            tileHeight = 40;
+            tileWidth = 36; // Larger tiles for small screens (was 32)
+            tileHeight = 45; // Larger tiles for small screens (was 40)
         } else {
             tileWidth = 40; // Standard tiles for larger screens
             tileHeight = 50;
@@ -1397,7 +1397,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/1.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4, 
                 description: "Простой уровень для знакомства с игрой"
             },
             // Level 2: Easy - Slightly larger
@@ -1407,7 +1407,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/2.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4, 
                 description: "Немного больше плиток для разминки"
             },
             // Level 3: Easy-Medium
@@ -1417,7 +1417,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/3.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4,    
                 description: "Увеличиваем сложность"
             },
             // Level 4: Medium
@@ -1427,7 +1427,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/4.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4, 
                 description: "Классический размер доски"
             },
             // Level 5: Medium
@@ -1437,7 +1437,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/5.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4, 
                 description: "Развиваем логическое мышление"
             },
             // Level 6: Medium-Hard
@@ -1447,7 +1447,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/6.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4, 
                 description: "Увеличиваем количество плиток"
             },
             // Level 7: Hard
@@ -1457,7 +1457,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/7.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4, 
                 description: "Настоящий вызов"
             },
             // Level 8: Hard
@@ -1467,7 +1467,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/8.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4, 
                 description: "Для опытных игроков"
             },
             // Level 9: Very Hard
@@ -1477,7 +1477,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/9.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4, 
                 description: "Мастерский уровень"
             },
             // Level 10: Very Hard
@@ -1487,7 +1487,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/10.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4, 
                 description: "Для настоящих мастеров"
             },
             // Level 11: Ultimate
@@ -1497,7 +1497,7 @@ class PaoPaoGame {
                 background: "Assets/Backgrounds/Normal/11.jpeg",
                 boardSize: { rows: INNER_ROWS, cols: INNER_COLS },
                 timeLimit: 600, // 10 minutes
-                tileTypes: INNER_ROWS * INNER_COLS / 4, // 18 pairs
+                tileTypes: INNER_ROWS * INNER_COLS / 4, 
                 description: "Финальный вызов"
             }
         ];
