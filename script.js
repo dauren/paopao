@@ -76,6 +76,9 @@ class PaoPaoGame {
         
         // Initialize Telegram back button if available
         this.initializeTelegramBackButton();
+        
+        // Update safe area insets for mobile devices
+        this.updateSafeAreaInsets();
     }
     
     initializeSounds() {
@@ -98,6 +101,58 @@ class PaoPaoGame {
             sound.load();
             sound.volume = 0.5;
         });
+    }
+    
+    // Haptic feedback for matched tiles
+    triggerHapticFeedback() {
+        // Check if haptic feedback is supported
+        if ('vibrate' in navigator) {
+            // Short vibration for tile match
+            navigator.vibrate(50);
+        }
+        
+        // For iOS devices, try to trigger haptic feedback
+        if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.hapticFeedback) {
+            window.webkit.messageHandlers.hapticFeedback.postMessage('success');
+        }
+        
+        // For Android WebView
+        if (window.Android && window.Android.vibrate) {
+            window.Android.vibrate(50);
+        }
+    }
+    
+    // Handle safe area insets for mobile devices
+    updateSafeAreaInsets() {
+        if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+            // Get safe area insets from Telegram Web App
+            const safeArea = tg.initDataUnsafe.start_param;
+            
+            // Update CSS custom properties
+            document.documentElement.style.setProperty('--tg-safe-area-inset-top', `${safeArea.top || 0}px`);
+            document.documentElement.style.setProperty('--tg-safe-area-inset-bottom', `${safeArea.bottom || 0}px`);
+            document.documentElement.style.setProperty('--tg-safe-area-inset-left', `${safeArea.left || 0}px`);
+            document.documentElement.style.setProperty('--tg-safe-area-inset-right', `${safeArea.right || 0}px`);
+        }
+        
+        // Fallback: detect safe areas using CSS environment variables
+        const safeAreaTop = getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-top)');
+        const safeAreaBottom = getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-bottom)');
+        const safeAreaLeft = getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-left)');
+        const safeAreaRight = getComputedStyle(document.documentElement).getPropertyValue('env(safe-area-inset-right)');
+        
+        if (safeAreaTop && safeAreaTop !== '0px') {
+            document.documentElement.style.setProperty('--tg-safe-area-inset-top', safeAreaTop);
+        }
+        if (safeAreaBottom && safeAreaBottom !== '0px') {
+            document.documentElement.style.setProperty('--tg-safe-area-inset-bottom', safeAreaBottom);
+        }
+        if (safeAreaLeft && safeAreaLeft !== '0px') {
+            document.documentElement.style.setProperty('--tg-safe-area-inset-left', safeAreaLeft);
+        }
+        if (safeAreaRight && safeAreaRight !== '0px') {
+            document.documentElement.style.setProperty('--tg-safe-area-inset-right', safeAreaRight);
+        }
     }
     
     // Initialize Telegram back button functionality

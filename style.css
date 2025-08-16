@@ -21,6 +21,12 @@ body {
     -moz-user-select: none;
     -ms-user-select: none;
     user-select: none;
+    
+    /* Safe area insets fallback using CSS environment variables */
+    --tg-safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --tg-safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --tg-safe-area-inset-left: env(safe-area-inset-left, 0px);
+    --tg-safe-area-inset-right: env(safe-area-inset-right, 0px);
 }
 
 .game-container {
@@ -28,6 +34,10 @@ body {
     height: 100vh;
     margin: 0;
     padding: 10px;
+    padding-top: calc(10px + var(--tg-safe-area-inset-top, 0px));
+    padding-bottom: calc(10px + var(--tg-safe-area-inset-bottom, 0px));
+    padding-left: calc(10px + var(--tg-safe-area-inset-left, 0px));
+    padding-right: calc(10px + var(--tg-safe-area-inset-right, 0px));
     background: var(--tg-theme-bg-color, #ffffff);
     color: var(--tg-theme-text-color, #000000);
     text-align: center;
@@ -56,6 +66,7 @@ body {
     gap: 10px;
     margin-top: 15px;
     padding: 8px 12px;
+    padding-bottom: calc(8px + var(--tg-safe-area-inset-bottom, 0px));
     background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.35));
     border-radius: 10px;
     border: 1px solid var(--tg-theme-hint-color, rgba(0, 0, 0, 0.4));
@@ -249,7 +260,7 @@ body {
     align-items: center;
     justify-content: center;
     margin-bottom: 0px;
-    padding-bottom: 10px;
+    padding-bottom: calc(10px + var(--tg-safe-area-inset-top, 0px));
     width: 100%;
     max-width: 500px;
 }
@@ -574,6 +585,10 @@ body {
 @media (max-width: 768px) {
     .game-container {
         padding: 8px;
+        padding-top: calc(8px + var(--tg-safe-area-inset-top, 0px));
+        padding-bottom: calc(8px + var(--tg-safe-area-inset-bottom, 0px));
+        padding-left: calc(8px + var(--tg-safe-area-inset-left, 0px));
+        padding-right: calc(8px + var(--tg-safe-area-inset-right, 0px));
         margin: 0;
         border-radius: 0;
     }
@@ -643,6 +658,10 @@ body {
 @media (max-width: 480px) {
     .game-container {
         padding: 8px;
+        padding-top: calc(8px + var(--tg-safe-area-inset-top, 0px));
+        padding-bottom: calc(8px + var(--tg-safe-area-inset-bottom, 0px));
+        padding-left: calc(8px + var(--tg-safe-area-inset-left, 0px));
+        padding-right: calc(8px + var(--tg-safe-area-inset-right, 0px));
         margin: 2px;
     }
     
