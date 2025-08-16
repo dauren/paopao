@@ -221,9 +221,15 @@ class PaoPaoGame {
         const gameBoard = document.getElementById('gameBoard');
         gameBoard.innerHTML = '';
         
-        // Определяем размер плитки на основе размера экрана (40×50 пропорции)
-        let tileWidth = 40; // По умолчанию для больших экранов
-        let tileHeight = 50; // По умолчанию для больших экранов
+        // Responsive tile sizing based on screen width
+        let tileWidth, tileHeight;
+        if (window.innerWidth < 932) {
+            tileWidth = 32; // Smaller tiles for small screens
+            tileHeight = 40;
+        } else {
+            tileWidth = 40; // Standard tiles for larger screens
+            tileHeight = 50;
+        }
         
         
         // Рендерим полную доску 18x11 (включая виртуальные области)
@@ -554,10 +560,15 @@ class PaoPaoGame {
     drawPathThroughEmptyCells() {
         const gameBoard = document.getElementById('gameBoard');
         
-        // Используем те же размеры плиток, что и в renderBoard
-        let tileWidth = 40; // Размер плитки по ширине
-        let tileHeight = 50; // Размер плитки по высоте
-        
+        // Responsive tile sizing based on screen width
+        let tileWidth, tileHeight;
+        if (window.innerWidth < 932) {
+            tileWidth = 32; // Smaller tiles for small screens
+            tileHeight = 40;
+        } else {
+            tileWidth = 40; // Standard tiles for larger screens
+            tileHeight = 50;
+        }
         
         // Рисуем линии между последовательными точками пути строго по сетке
         for (let i = 0; i < this.path.length - 1; i++) {
@@ -588,9 +599,15 @@ class PaoPaoGame {
         
         const gameBoard = document.getElementById('gameBoard');
         
-        // Используем те же размеры плиток, что и в renderBoard
-        let tileWidth = 40; // Размер плитки по ширине
-        let tileHeight = 50; // Размер плитки по высоте
+        // Responsive tile sizing based on screen width
+        let tileWidth, tileHeight;
+        if (window.innerWidth < 932) {
+            tileWidth = 32; // Smaller tiles for small screens
+            tileHeight = 40;
+        } else {
+            tileWidth = 40; // Standard tiles for larger screens
+            tileHeight = 50;
+        }
         
         const toPixel = (row, col) => {
             // Теперь используем координаты полной доски 18x11
@@ -688,9 +705,15 @@ class PaoPaoGame {
         const isHorizontal = tile1.row === tile2.row;
         const isVertical = tile1.col === tile2.col;
         
-        // Используем размеры плиток для точного позиционирования
-        let tileWidth = 40; // Размер плитки по ширине
-        let tileHeight = 50; // Размер плитки по высоте
+        // Responsive tile sizing based on screen width
+        let tileWidth, tileHeight;
+        if (window.innerWidth < 932) {
+            tileWidth = 32; // Smaller tiles for small screens
+            tileHeight = 40;
+        } else {
+            tileWidth = 40; // Standard tiles for larger screens
+            tileHeight = 50;
+        }
         
         if (isHorizontal) {
             // Горизонтальная линия

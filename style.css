@@ -144,6 +144,14 @@ body {
     flex: 1;
 }
 
+/* Responsive tile sizing */
+@media (max-width: 931px) {
+    .game-board {
+        width: min(95vw, 352px); /* 11 columns × 32px */
+        height: min(85vh, 720px); /* 18 rows × 40px */
+    }
+}
+
 .tile {
     /* Compact tiles for mobile */
     width: 40px;
@@ -600,8 +608,8 @@ body {
     }
     
     .game-board {
-        width: min(95vw, 400px);
-        height: min(85vh, 800px);
+        width: min(95vw, 352px); /* 11 columns × 32px for small screens */
+        height: min(85vh, 720px); /* 18 rows × 40px for small screens */
     }
 }
 
