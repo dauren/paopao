@@ -27,6 +27,8 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    align-items: center;
+    justify-content: center;
 }
 
 
@@ -44,7 +46,7 @@ body {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-bottom: 8px;
+    margin-bottom: 15px;
     padding: 8px 12px;
     background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.15));
     border-radius: 10px;
@@ -53,6 +55,8 @@ body {
     height: 50px;
     flex-direction: row;
     flex-wrap: nowrap;
+    width: 100%;
+    max-width: 500px;
 }
 
 .hearts-container {
@@ -135,20 +139,34 @@ body {
     height: min(80vh, 900px); /* Responsive height with max of 900px */
     background: transparent;
     padding: 0;
-    margin: 0 auto 10px auto;
+    margin: 0;
     box-shadow: none;
     position: relative;
     font-size: 0;
     line-height: 0;
     overflow: hidden;
-    flex: 1;
+    flex: none;
+    align-self: center;
 }
 
 /* Responsive tile sizing */
 @media (max-width: 931px) {
     .game-board {
-        width: min(95vw, 352px); /* 11 columns × 32px */
-        height: min(85vh, 720px); /* 18 rows × 40px */
+        width: min(95vw, 320px); /* 10 columns × 32px */
+        height: min(85vh, 640px); /* 16 rows × 40px */
+    }
+    
+    .game-info,
+    .game-controls {
+        max-width: 400px;
+    }
+    
+    .game-info {
+        margin-bottom: 12px;
+    }
+    
+    .game-controls {
+        margin-top: 12px;
     }
 }
 
@@ -222,9 +240,10 @@ body {
     gap: 10px;
     align-items: center;
     justify-content: center;
-    margin-top: auto;
+    margin-top: 15px;
     padding-bottom: 10px;
     width: 100%;
+    max-width: 500px;
 }
 
 .level-navigation {
@@ -608,8 +627,8 @@ body {
     }
     
     .game-board {
-        width: min(95vw, 352px); /* 11 columns × 32px for small screens */
-        height: min(85vh, 720px); /* 18 rows × 40px for small screens */
+        width: min(95vw, 320px); /* 10 columns × 32px for small screens */
+        height: min(85vh, 640px); /* 16 rows × 40px for small screens */
     }
 }
 
