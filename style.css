@@ -46,9 +46,9 @@ body {
     gap: 10px;
     margin-bottom: 8px;
     padding: 8px 12px;
-    background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.05));
+    background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.15));
     border-radius: 10px;
-    border: 1px solid var(--tg-theme-hint-color, rgba(0, 0, 0, 0.1));
+    border: 1px solid var(--tg-theme-hint-color, rgba(0, 0, 0, 0.2));
     flex-shrink: 0;
     height: 50px;
     flex-direction: row;
@@ -293,6 +293,15 @@ body {
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    line-height: 1;
+    text-align: center;
+}
+
+.btn::before {
+    content: '';
+    display: inline-block;
+    height: 0;
+    vertical-align: middle;
 }
 
 .btn-primary {
@@ -538,6 +547,8 @@ body {
         gap: 6px;
         padding: 6px 8px;
         height: 45px;
+        background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.15));
+        border: 1px solid var(--tg-theme-hint-color, rgba(0, 0, 0, 0.2));
     }
     
     .hearts-container {
@@ -607,6 +618,8 @@ body {
         gap: 4px;
         padding: 4px 6px;
         height: 40px;
+        background: var(--tg-theme-secondary-bg-color, rgba(0, 0, 0, 0.15));
+        border: 1px solid var(--tg-theme-hint-color, rgba(0, 0, 0, 0.2));
     }
     
     .hearts-container,
