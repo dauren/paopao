@@ -551,7 +551,7 @@ class PaoPaoGame {
         if (this.isGameOver || this.isPaused || this.isShuffling || this.isSolving) return;
 
         const tile = this.board[row][col];
-        if (!tile || tile.matched || tile.disappearing) return;
+        if (!tile || tile.matched) return;
         
         // Воспроизводим звук клика
         this.playSound('click');
@@ -778,7 +778,7 @@ class PaoPaoGame {
                col >= 0 && col < this.boardSize.cols;
       }
 
-    // Клетка пуста, если за пределами внутренней области null или внутри и tile.matched или исчезающая
+    // Клетка пуста, если за пределами внутренней области null или внутри и tile.matched
     isCellEmpty(row, col) {
         if (!this.isInsideFullGrid(row, col)) return false;
         const tile = this.board[row]?.[col];
@@ -786,7 +786,7 @@ class PaoPaoGame {
         // Frame cells (outer border) are always passable for pathfinding
         if (this.isFrameCell(row, col)) return true;
         
-        return !tile || tile.matched === true || tile.disappearing === true;
+        return !tile || tile.matched === true;
     }
     
     // Check if position is in the frame (outer border) area
