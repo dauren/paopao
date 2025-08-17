@@ -6,6 +6,8 @@ try {
         tg.ready();
         tg.expand();
         console.log('Telegram Web App initialized');
+        tg.SettingsButton.isVisible = false;
+        tg.SettingsButton.hide();
     }
 } catch (e) {
     console.log('Telegram Web App not available, running in browser mode');
@@ -314,6 +316,139 @@ class PaoPaoGame {
             this.board[r] = new Array(this.boardSize.cols).fill(null);
         }
         
+        // Generate solvable board using reverse simulation
+        this.generateSolvableBoard();
+        
+        // Fill empty cells
+        for (let r = 0; r < this.boardSize.rows; r++) {
+            for (let c = 0; c < this.boardSize.cols; c++) {
+                if (!this.board[r][c]) {
+                    this.board[r][c] = {
+                        id: null,
+                        image: null,
+                        row: r,
+                        col: c,
+                        matched: true, // Пустые ячейки считаются совпавшими
+                        element: null,
+                    };
+                }
+            }
+        }
+    }
+    
+    // Generate a guaranteed solvable board by reverse simulation
+    generateSolvableBoard() {
+        const maxAttempts = 10;
+        
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            console.log(`Generating solvable board, attempt ${attempt + 1}`);
+            
+            if (this.tryGenerateSolvableBoard()) {
+                console.log('Successfully generated solvable board');
+                return;
+            }
+        }
+        
+        console.log('Failed to generate solvable board, using fallback');
+        this.generateFallbackBoard();
+    }
+    
+    tryGenerateSolvableBoard() {
+        // Clear the inner board area
+        for (let ir = 0; ir < this.innerSize.rows; ir++) {
+            for (let ic = 0; ic < this.innerSize.cols; ic++) {
+                const r = this.innerOffset.row + ir;
+                const c = this.innerOffset.col + ic;
+                this.board[r][c] = null;
+            }
+        }
+        
+        // Create pairs of tiles to place
+        const tilePairs = [];
+        for (let i = 0; i < this.tiles.length; i += 2) {
+            tilePairs.push([this.tiles[i], this.tiles[i + 1]]);
+        }
+        
+        // Shuffle pairs for randomness
+        for (let i = tilePairs.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [tilePairs[i], tilePairs[j]] = [tilePairs[j], tilePairs[i]];
+        }
+        
+        // Place pairs in reverse order (simulate reverse of solving)
+        for (const [tile1, tile2] of tilePairs) {
+            if (!this.placeTilePair(tile1, tile2)) {
+                return false; // Failed to place this pair
+            }
+        }
+        
+        return true;
+    }
+    
+    placeTilePair(tile1, tile2) {
+        const availablePositions = this.getAvailablePositions();
+        const maxPairAttempts = 100;
+        
+        for (let attempt = 0; attempt < maxPairAttempts; attempt++) {
+            if (availablePositions.length < 2) return false;
+            
+            // Pick two random positions
+            const pos1Index = Math.floor(Math.random() * availablePositions.length);
+            const pos1 = availablePositions[pos1Index];
+            availablePositions.splice(pos1Index, 1);
+            
+            const pos2Index = Math.floor(Math.random() * availablePositions.length);
+            const pos2 = availablePositions[pos2Index];
+            availablePositions.splice(pos2Index, 1);
+            
+            // Temporarily place tiles
+            this.board[pos1.row][pos1.col] = {
+                ...tile1,
+                row: pos1.row,
+                col: pos1.col,
+                element: null
+            };
+            this.board[pos2.row][pos2.col] = {
+                ...tile2,
+                row: pos2.row,
+                col: pos2.col,
+                element: null
+            };
+            
+            // Check if these positions can be connected
+            if (this.canConnect(this.board[pos1.row][pos1.col], this.board[pos2.row][pos2.col])) {
+                // Success! Keep the placement
+                return true;
+            }
+            
+            // Failed, remove tiles and try again
+            this.board[pos1.row][pos1.col] = null;
+            this.board[pos2.row][pos2.col] = null;
+            
+            // Return positions to available list
+            availablePositions.push(pos1, pos2);
+        }
+        
+        return false;
+    }
+    
+    getAvailablePositions() {
+        const positions = [];
+        for (let ir = 0; ir < this.innerSize.rows; ir++) {
+            for (let ic = 0; ic < this.innerSize.cols; ic++) {
+                const r = this.innerOffset.row + ir;
+                const c = this.innerOffset.col + ic;
+                if (!this.board[r][c]) {
+                    positions.push({ row: r, col: c });
+                }
+            }
+        }
+        return positions;
+    }
+    
+    // Fallback: simple random placement if solvable generation fails
+    generateFallbackBoard() {
+        console.log('Using fallback random placement');
         // Перемешиваем все тайлы
         for (let i = this.tiles.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
@@ -327,26 +462,11 @@ class PaoPaoGame {
                 const c = this.innerOffset.col + ic;
                 this.board[r][c] = {
                     ...this.tiles[tileIndex],
-                    row: r, // координаты в полной сетке
+                    row: r,
                     col: c,
                     element: null,
                 };
                 tileIndex++;
-            }
-        }
-        
-        for (let r = 0; r < this.boardSize.rows; r++) {
-            for (let c = 0; c < this.boardSize.cols; c++) {
-                if (!this.board[r][c]) {
-                    this.board[r][c] = {
-                        id: null,
-                        image: null,
-                        row: r,
-                        col: c,
-                        matched: true, // Пустые ячейки считаются совпавшими
-                        element: null,
-                    };
-                }
             }
         }
     }
@@ -409,7 +529,7 @@ class PaoPaoGame {
                 }
                 
                 // Добавляем обработчик клика только для тайлов с изображениями
-                if (tile.image && !tile.matched) {
+                if (tile.image && !tile.matched && !tile.disappearing) {
                     tileElement.addEventListener('click', () => this.handleTileClick(tile.row, tile.col));
                 }
                 
@@ -431,7 +551,7 @@ class PaoPaoGame {
         if (this.isGameOver || this.isPaused || this.isShuffling || this.isSolving) return;
 
         const tile = this.board[row][col];
-        if (!tile || tile.matched) return;
+        if (!tile || tile.matched || tile.disappearing) return;
         
         // Воспроизводим звук клика
         this.playSound('click');
@@ -470,23 +590,44 @@ class PaoPaoGame {
     }
     
     canConnect(tile1, tile2) {
+        if (tile1.id !== tile2.id) return false;
         console.log(`Checking connection between tiles at (${tile1.row},${tile1.col}) and (${tile2.row},${tile2.col})`);
         
-        // Сначала проверяем прямые соединения
+        // 1. Adjacent tiles (0 turns)
         if (this.areTilesAdjacent(tile1, tile2)) {
-            console.log('Direct adjacent connection found');
+            this.path = [
+                { row: tile1.row, col: tile1.col },
+                { row: tile2.row, col: tile2.col }
+            ];
+            console.log('Adjacent connection found');
             return true;
         }
         
-        // Затем проверяем L-образные пути (более эффективно для диагональных расположений)
-        if (this.canConnectLShape(tile1, tile2)) {
-            console.log('L-shaped path found');
+        // 2. Straight line (0 turns)
+        const straightPath = this.findStraightPath(tile1, tile2);
+        if (straightPath) {
+            this.path = straightPath;
+            console.log('Straight line connection found');
             return true;
         }
         
-        // Наконец, используем поиск в ширину (BFS) для сложных путей
-        console.log('Trying BFS pathfinding...');
-        return this.findPathBFS(tile1, tile2);
+        // 3. L-shape path (1 turn)
+        const lPath = this.findLShapePath(tile1, tile2);
+        if (lPath) {
+            this.path = lPath;
+            console.log('L-shape connection found');
+            return true;
+        }
+        
+        // 4. U-shape path (2 turns)
+        const uPath = this.findUShapePath(tile1, tile2);
+        if (uPath) {
+            this.path = uPath;
+            console.log('U-shape connection found');
+            return true;
+        }
+        
+        return false;
     }
     
     // Проверяем, касаются ли плитки друг друга
@@ -587,38 +728,57 @@ class PaoPaoGame {
     }
     
     connectTiles(tile1, tile2) {
-        // Соединяем плитки - они исчезают с доски
-        tile1.matched = true;
-        tile2.matched = true;
-        
-        // Обновляем UI - плитки становятся пустыми клетками
-        tile1.element.classList.remove('selected');
-        tile1.element.classList.add('empty');
-        tile2.element.classList.add('empty');
-        
-        // Убираем изображения из пустых клеток
-        const img1 = tile1.element.querySelector('img');
-        const img2 = tile2.element.querySelector('img');
-        if (img1) img1.style.display = 'none';
-        if (img2) img2.style.display = 'none';
-        
-        // Показываем линию соединения
+        // check is ids are the same
+        if (tile1.id != tile2.id) {
+            console.log('Different tile clicked, deselected');
+            this.selectedTile = null;
+            return;
+        }
+
+        // Сначала показываем линию соединения с видимыми плитками
         this.showConnectionLine(tile1, tile2);
+        
+        // Помечаем плитки как "исчезающие" чтобы они не участвовали в новых соединениях
+        tile1.disappearing = true;
+        tile2.disappearing = true;
+        
+        // Убираем выделение, но оставляем плитки видимыми
+        tile1.element.classList.remove('selected');
+        tile2.element.classList.remove('selected');
         
         // Воспроизводим звук успеха
         this.playSound('success');
         
-        // Увеличиваем счет
-        this.score += 10;
-        this.updateScore();
-        
-        // Проверяем, закончилась ли игра
-        this.checkGameEnd();
+        // Задержка перед скрытием плиток (после показа линии)
+        setTimeout(() => {
+            // Теперь помечаем плитки как совпавшие
+            tile1.matched = true;
+            tile2.matched = true;
+            
+            // Обновляем UI - плитки становятся пустыми клетками
+            tile1.element.classList.add('empty');
+            tile2.element.classList.add('empty');
+            
+            // Убираем изображения из пустых клеток
+            const img1 = tile1.element.querySelector('img');
+            const img2 = tile2.element.querySelector('img');
+            if (img1) img1.style.display = 'none';
+            if (img2) img2.style.display = 'none';
+            
+            // Увеличиваем счет
+            this.score += 10;
+            this.updateScore();
+            
+            // Проверяем, закончилась ли игра
+            this.checkGameEnd();
+            
+            // Проверяем наличие доступных ходов только если игра не закончена
+            if (!this.isGameOver) {
+                this.checkAndHandleNoMoves();
+            }
+        }, 200); // Скрываем плитки через 1.2 секунды (когда линия исчезает)
         
         this.selectedTile = null;
-
-        // После успешного соединения гарантируем существование следующего хода
-        this.ensureAnyMoveExists();
     }
 
     isInsideFullGrid(row, col) {
@@ -626,11 +786,11 @@ class PaoPaoGame {
                col >= 0 && col < this.boardSize.cols;
       }
 
-    // Клетка пуста, если за пределами внутренней области null или внутри и tile.matched
+    // Клетка пуста, если за пределами внутренней области null или внутри и tile.matched или исчезающая
     isCellEmpty(row, col) {
         if (!this.isInsideFullGrid(row, col)) return false;
         const tile = this.board[row]?.[col];
-        return !tile || tile.matched === true;
+        return !tile || tile.matched === true || tile.disappearing === true;
     }
     
     isPositionEmpty(pos) {
@@ -911,7 +1071,7 @@ class PaoPaoGame {
                 this.updateTimer();
                 
                 if (this.timeLeft <= 0) {
-                    this.endGame(false, 'time-up');
+                    this.gameOver('Time is up!');
                 }
             }
         }, 1000);
@@ -972,7 +1132,7 @@ class PaoPaoGame {
             this.updateHearts();
             
             if (this.hearts <= 0) {
-                this.endGame(false, 'no-hearts');
+                this.gameOver('No more hearts!');
             }
         }
     }
@@ -984,7 +1144,7 @@ class PaoPaoGame {
     
     checkHearts() {
         if (this.hearts <= 0) {
-            this.endGame(false, 'no-hearts');
+            this.gameOver('No more hearts!');
             return false;
         }
         return true;
@@ -1004,20 +1164,52 @@ class PaoPaoGame {
     }
     
     levelCompleted() {
+        this.isGameOver = true; // Mark as game over to prevent further move checking
+        
         this.playSound('levelcomplited');
         
         // Send level completion data to Telegram
         this.sendLevelCompletionToTelegram();
         
-        // Показываем overlay с поздравлением
+        // Stop the timer
+        if (this.gameTimer) {
+            clearInterval(this.gameTimer);
+        }
+        
+        // Update background to next level immediately (if not final level)
+        if (this.currentLevel < 11) {
+            const nextLevel = this.levels.find(level => level.id === this.currentLevel + 1);
+            if (nextLevel) {
+                this.updateBackground(nextLevel.background);
+            }
+        }
+        
         const overlay = document.getElementById('gameOverlay');
-        overlay.innerHTML = `
-            <div class="game-overlay-content">
-                <h2>🎉 Уровень ${this.currentLevel} пройден! 🎉</h2>
-                <p>Отличная работа! Игра завершена.</p>
-                <button class="btn" onclick="game.newGame()">Играть снова</button>
-            </div>
-        `;
+        
+        if (this.currentLevel >= 11) {
+            // All levels completed - mega congratulation
+            overlay.innerHTML = `
+                <div class="game-overlay-content">
+                    <h2>🎉🏆 MEGA CONGRATULATIONS! 🏆🎉</h2>
+                    <p>You've completed all 11 levels!</p>
+                    <p>You are a true PaoPao master!</p>
+                    <div class="final-score">Final Score: ${this.score}</div>
+                    <button class="btn btn-primary" onclick="game.startNewGame()">Start New Game</button>
+                </div>
+            `;
+        } else {
+            // Level completed - show next level button
+            overlay.innerHTML = `
+                <div class="game-overlay-content">
+                    <h2>🎉 Level ${this.currentLevel} Complete! 🎉</h2>
+                    <p>Great job! Ready for the next challenge?</p>
+                    <div class="score-display">Score: ${this.score}</div>
+                    <button class="btn btn-primary" onclick="game.nextLevel()">Play Next Level</button>
+                    <button class="btn btn-secondary" onclick="game.startNewGame()">Restart Game</button>
+                </div>
+            `;
+        }
+        
         overlay.classList.add('show');
         
         // Show Telegram back button when overlay is shown
@@ -1028,19 +1220,6 @@ class PaoPaoGame {
         // Даем 2 сердца за прохождение уровня
         this.gainHearts(2);
         this.showHeartReward();
-        
-        // Останавливаем таймер
-        clearInterval(this.gameTimer);
-        
-        // Показываем поздравление на 3 секунды, затем перезапускаем игру
-        setTimeout(() => {
-            overlay.classList.remove('show');
-            // Hide Telegram back button when overlay is hidden
-            if (tg && tg.BackButton) {
-                tg.BackButton.hide();
-            }
-            this.newGame();
-        }, 3000);
     }
     
     // Send level completion data to Telegram
@@ -1342,8 +1521,8 @@ class PaoPaoGame {
                         const b = this.board[r2]?.[c2];
                         if (!b || b.matched) continue;
                         if (a.id !== b.id) continue;
-                        // Проверяем возможность соединения через BFS
-                        if (this.findPathBFS(a, b)) {
+                        // Проверяем возможность соединения
+                        if (this.canConnect(a, b)) {
                             this.connectTiles(a, b);
                             return true;
                         }
@@ -1378,7 +1557,7 @@ class PaoPaoGame {
             }
             for (let i = 0; i < arr.length; i++) {
                 for (let j = i + 1; j < arr.length; j++) {
-                    if (this.findPathBFS(arr[i], arr[j])) {
+                    if (this.canConnect(arr[i], arr[j])) {
                         return true;
                     }
                 }
@@ -1389,8 +1568,8 @@ class PaoPaoGame {
 
     // Перемешивание оставшихся (не совпавших) тайлов по текущим позициям
     shuffleRemainingTiles() {
-        if (this.hearts <= 1) {
-            this.showNoHeartsWarning();
+        if (this.hearts <= 0) {
+            this.gameOver('No more hearts to shuffle!');
             return;
         }
         
@@ -1666,11 +1845,16 @@ class PaoPaoGame {
     }
     
     updateBackground(backgroundPath) {
+        console.log(`Updating background to: ${backgroundPath}`);
         const gameContainer = document.querySelector('.game-container');
-        gameContainer.style.backgroundImage = `url('${backgroundPath}')`;
-        gameContainer.style.backgroundSize = 'cover';
-        gameContainer.style.backgroundPosition = 'center';
-        gameContainer.style.backgroundRepeat = 'no-repeat';
+        
+        // Use setProperty to override CSS with !important
+        gameContainer.style.setProperty('background-image', `url('${backgroundPath}')`, 'important');
+        gameContainer.style.setProperty('background-size', 'cover', 'important');
+        gameContainer.style.setProperty('background-position', 'center', 'important');
+        gameContainer.style.setProperty('background-repeat', 'no-repeat', 'important');
+        
+        console.log(`Background updated. Current style:`, gameContainer.style.backgroundImage);
     }
     
     updateLevelDisplay() {
@@ -1696,7 +1880,7 @@ class PaoPaoGame {
             this.updateHearts();
             
             if (this.hearts <= 0) {
-                this.endGame(false, 'no-hearts');
+                this.gameOver('No more hearts!');
             }
         }
     }
@@ -1708,7 +1892,7 @@ class PaoPaoGame {
     
     checkHearts() {
         if (this.hearts <= 0) {
-            this.endGame(false, 'no-hearts');
+            this.gameOver('No more hearts!');
             return false;
         }
         return true;
@@ -1796,32 +1980,361 @@ class PaoPaoGame {
             }
         }
         
-        // Создаем полный путь с промежуточными точками для плавного рисования
+        // Создаем L-образный путь с корректной угловой точкой
         const fullPath = [];
         fullPath.push({ row: tile1.row, col: tile1.col });
         
-        // Добавляем промежуточные точки в правильном порядке
+        // Добавляем угловую точку для L-образного пути
         if (firstDirection === 'horizontal') {
-            // Сначала горизонтальные точки
-            const horizontalPoints = path.filter(p => p.row === tile1.row);
-            fullPath.push(...horizontalPoints);
-            
-            // Потом вертикальные точки
-            const verticalPoints = path.filter(p => p.col === tile2.col);
-            fullPath.push(...verticalPoints);
+            // Горизонтально, затем вертикально: угол в (tile1.row, tile2.col)
+            fullPath.push({ row: tile1.row, col: tile2.col });
         } else {
-            // Сначала вертикальные точки
-            const verticalPoints = path.filter(p => p.col === tile1.col);
-            fullPath.push(...verticalPoints);
-            
-            // Потом горизонтальные точки
-            const horizontalPoints = path.filter(p => p.row === tile2.row);
-            fullPath.push(...horizontalPoints);
+            // Вертикально, затем горизонтально: угол в (tile2.row, tile1.col)
+            fullPath.push({ row: tile2.row, col: tile1.col });
         }
         
         fullPath.push({ row: tile2.row, col: tile2.col });
         
         return fullPath;
+    }
+
+    // Game over scenarios (hearts <= 0, time over, no moves)
+    gameOver(reason = 'Game Over') {
+        this.isGameOver = true;
+        
+        // Stop the timer
+        if (this.gameTimer) {
+            clearInterval(this.gameTimer);
+        }
+        
+        this.playSound('gameover');
+        
+        const overlay = document.getElementById('gameOverlay');
+        overlay.innerHTML = `
+            <div class="game-overlay-content">
+                <h2>💔 Game Over 💔</h2>
+                <p>${reason}</p>
+                <div class="final-score">Score: ${this.score}</div>
+                <div class="game-stats">
+                    <p>Level: ${this.currentLevel}</p>
+                    <p>Hearts: ${this.hearts}</p>
+                    <p>Time: ${Math.floor(this.timeLeft / 60)}:${(this.timeLeft % 60).toString().padStart(2, '0')}</p>
+                </div>
+                <button class="btn btn-primary" onclick="game.startNewGame()">Try Again</button>
+            </div>
+        `;
+        overlay.classList.add('show');
+        
+        // Send game data to Telegram
+        this.sendGameDataToTelegram();
+    }
+
+    // Proceed to next level
+    nextLevel() {
+        if (this.currentLevel < 11) {
+            this.currentLevel++;
+            
+            // Save current hearts before level change
+            const currentHearts = this.hearts;
+            
+            this.setLevel(this.currentLevel);
+            
+            // Restore hearts (don't reset to max)
+            this.hearts = currentHearts;
+            
+            this.continueGame(); // Use continueGame instead of newGame
+        }
+    }
+
+    // Start completely new game (reset to level 1)
+    startNewGame() {
+        this.currentLevel = 1;
+        this.setLevel(1);
+        this.newGame();
+    }
+
+    // Continue to next level without resetting hearts
+    continueGame() {
+        // Сбрасываем состояние игры (кроме hearts и score)
+        // Score continues accumulating across levels
+        this.timeLeft = this.getCurrentLevel().timeLimit;
+        this.selectedTile = null;
+        this.isPaused = false;
+        this.isGameOver = false;
+        
+        // Don't reset hearts here - they carry over from previous level
+        
+        // Очищаем таймер
+        if (this.gameTimer) {
+            clearInterval(this.gameTimer);
+        }
+        
+        // Скрываем оверлей
+        document.getElementById('gameOverlay').classList.remove('show');
+        
+        // Обновляем UI
+        this.updateScore();
+        this.updateTimer();
+        this.updateLevelDisplay();
+        this.updateHearts(); // Update display of carried-over hearts
+        
+        // Перезапускаем игру с новым уровнем
+        this.createTiles();
+        this.initializeBoard();
+        this.renderBoard();
+        this.startTimer();
+        this.playSound('shuffle');
+        
+        // Update Telegram main button
+        this.updateTelegramMainButton();
+    }
+
+    // Check for available moves and auto-shuffle if needed
+    checkAndHandleNoMoves() {
+        // Skip if game is over
+        if (this.isGameOver) return;
+        
+        // Check if there are any available connections
+        if (!this.existsAnyConnection()) {
+            console.log('No moves available - auto shuffling...');
+            
+            // Check if we have enough hearts for shuffling
+            if (this.hearts <= 0) {
+                this.gameOver('No more hearts!');
+                return;
+            }
+            
+            // Auto-shuffle
+            this.shuffleRemainingTiles();
+            
+            // After shuffling, check again
+            if (!this.existsAnyConnection()) {
+                // If still no moves after shuffle, game over
+                this.gameOver('No possible moves!');
+            }
+        }
+    }
+
+    // New improved path finding methods
+    
+    // Check if two tiles can be connected by a straight line (horizontal or vertical)
+    findStraightPath(tile1, tile2) {
+        // Must be on same row or column
+        if (tile1.row !== tile2.row && tile1.col !== tile2.col) {
+            return null;
+        }
+        
+        const path = [{ row: tile1.row, col: tile1.col }];
+        
+        if (tile1.row === tile2.row) {
+            // Horizontal line
+            const startCol = Math.min(tile1.col, tile2.col);
+            const endCol = Math.max(tile1.col, tile2.col);
+            
+            // Check if path is clear (excluding start and end tiles)
+            for (let col = startCol + 1; col < endCol; col++) {
+                if (!this.isCellEmpty(tile1.row, col)) {
+                    return null;
+                }
+            }
+        } else {
+            // Vertical line
+            const startRow = Math.min(tile1.row, tile2.row);
+            const endRow = Math.max(tile1.row, tile2.row);
+            
+            // Check if path is clear (excluding start and end tiles)
+            for (let row = startRow + 1; row < endRow; row++) {
+                if (!this.isCellEmpty(row, tile1.col)) {
+                    return null;
+                }
+            }
+        }
+        
+        path.push({ row: tile2.row, col: tile2.col });
+        return path;
+    }
+    
+    // Check if two tiles can be connected by an L-shape (exactly 1 turn)
+    findLShapePath(tile1, tile2) {
+        // L-shape is only possible if tiles are not on same row AND not on same column
+        if (tile1.row === tile2.row || tile1.col === tile2.col) {
+            return null;
+        }
+        
+        // Try both L-shape orientations
+        
+        // Option 1: Horizontal first, then vertical
+        const corner1 = { row: tile1.row, col: tile2.col };
+        if (this.isCellEmpty(corner1.row, corner1.col)) {
+            // Check horizontal segment
+            const startCol1 = Math.min(tile1.col, corner1.col);
+            const endCol1 = Math.max(tile1.col, corner1.col);
+            let horizontalClear1 = true;
+            for (let col = startCol1 + 1; col < endCol1; col++) {
+                if (!this.isCellEmpty(tile1.row, col)) {
+                    horizontalClear1 = false;
+                    break;
+                }
+            }
+            
+            // Check vertical segment
+            const startRow1 = Math.min(corner1.row, tile2.row);
+            const endRow1 = Math.max(corner1.row, tile2.row);
+            let verticalClear1 = true;
+            for (let row = startRow1 + 1; row < endRow1; row++) {
+                if (!this.isCellEmpty(row, tile2.col)) {
+                    verticalClear1 = false;
+                    break;
+                }
+            }
+            
+            if (horizontalClear1 && verticalClear1) {
+                return [
+                    { row: tile1.row, col: tile1.col },
+                    { row: corner1.row, col: corner1.col },
+                    { row: tile2.row, col: tile2.col }
+                ];
+            }
+        }
+        
+        // Option 2: Vertical first, then horizontal
+        const corner2 = { row: tile2.row, col: tile1.col };
+        if (this.isCellEmpty(corner2.row, corner2.col)) {
+            // Check vertical segment
+            const startRow2 = Math.min(tile1.row, corner2.row);
+            const endRow2 = Math.max(tile1.row, corner2.row);
+            let verticalClear2 = true;
+            for (let row = startRow2 + 1; row < endRow2; row++) {
+                if (!this.isCellEmpty(row, tile1.col)) {
+                    verticalClear2 = false;
+                    break;
+                }
+            }
+            
+            // Check horizontal segment
+            const startCol2 = Math.min(corner2.col, tile2.col);
+            const endCol2 = Math.max(corner2.col, tile2.col);
+            let horizontalClear2 = true;
+            for (let col = startCol2 + 1; col < endCol2; col++) {
+                if (!this.isCellEmpty(tile2.row, col)) {
+                    horizontalClear2 = false;
+                    break;
+                }
+            }
+            
+            if (verticalClear2 && horizontalClear2) {
+                return [
+                    { row: tile1.row, col: tile1.col },
+                    { row: corner2.row, col: corner2.col },
+                    { row: tile2.row, col: tile2.col }
+                ];
+            }
+        }
+        
+        return null;
+    }
+    
+    // Check if two tiles can be connected by a U-shape (exactly 2 turns)
+    findUShapePath(tile1, tile2) {
+        // Try U-shape paths via horizontal lines (same row)
+        for (let row = 0; row < ROWS; row++) {
+            // Skip if it's the same row as either tile (would be L-shape or straight)
+            if (row === tile1.row || row === tile2.row) continue;
+            
+            const path = this.tryUShapeViaLine(tile1, tile2, row, 'row');
+            if (path) {
+                console.log(`U-shape found via horizontal line at row ${row}`);
+                return path;
+            }
+        }
+        
+        // Try U-shape paths via vertical lines (same column)
+        for (let col = 0; col < COLS; col++) {
+            // Skip if it's the same column as either tile (would be L-shape or straight)
+            if (col === tile1.col || col === tile2.col) continue;
+            
+            const path = this.tryUShapeViaLine(tile1, tile2, col, 'col');
+            if (path) {
+                console.log(`U-shape found via vertical line at col ${col}`);
+                return path;
+            }
+        }
+        
+        return null;
+    }
+    
+    // Helper method to try U-shape via specific line (row or column)
+    tryUShapeViaLine(tile1, tile2, linePosition, lineType) {
+        let corner1, corner2;
+        
+        if (lineType === 'row') {
+            // U-shape via horizontal line
+            corner1 = { row: linePosition, col: tile1.col };
+            corner2 = { row: linePosition, col: tile2.col };
+        } else {
+            // U-shape via vertical line
+            corner1 = { row: tile1.row, col: linePosition };
+            corner2 = { row: tile2.row, col: linePosition };
+        }
+        
+        // Check if corner cells are empty
+        if (!this.isCellEmpty(corner1.row, corner1.col) || !this.isCellEmpty(corner2.row, corner2.col)) {
+            return null;
+        }
+        
+        // For U-shape, corner1 and corner2 should be different points
+        if (corner1.row === corner2.row && corner1.col === corner2.col) {
+            return null;
+        }
+        
+        // Check first segment (tile1 to corner1)
+        if (!this.isSegmentClear(tile1, corner1)) {
+            return null;
+        }
+        
+        // Check middle segment (corner1 to corner2)
+        if (!this.isSegmentClear(corner1, corner2)) {
+            return null;
+        }
+        
+        // Check last segment (corner2 to tile2)
+        if (!this.isSegmentClear(corner2, tile2)) {
+            return null;
+        }
+        
+        return [
+            { row: tile1.row, col: tile1.col },
+            { row: corner1.row, col: corner1.col },
+            { row: corner2.row, col: corner2.col },
+            { row: tile2.row, col: tile2.col }
+        ];
+    }
+    
+    // Helper method to check if a segment between two points is clear
+    isSegmentClear(point1, point2) {
+        if (point1.row === point2.row) {
+            // Horizontal segment
+            const startCol = Math.min(point1.col, point2.col);
+            const endCol = Math.max(point1.col, point2.col);
+            for (let col = startCol + 1; col < endCol; col++) {
+                if (!this.isCellEmpty(point1.row, col)) {
+                    return false;
+                }
+            }
+        } else if (point1.col === point2.col) {
+            // Vertical segment
+            const startRow = Math.min(point1.row, point2.row);
+            const endRow = Math.max(point1.row, point2.row);
+            for (let row = startRow + 1; row < endRow; row++) {
+                if (!this.isCellEmpty(row, point1.col)) {
+                    return false;
+                }
+            }
+        } else {
+            // Diagonal segment - not allowed
+            return false;
+        }
+        return true;
     }
 }
 
@@ -1843,6 +2356,6 @@ document.head.appendChild(style);
 
 // Запускаем игру когда страница загружена
 document.addEventListener('DOMContentLoaded', () => {
-    new PaoPaoGame();
+    window.game = new PaoPaoGame();
 });
 

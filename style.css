@@ -38,7 +38,7 @@ body {
     padding-bottom: calc(10px + var(--tg-safe-area-inset-bottom, 0px));
     padding-left: calc(10px + var(--tg-safe-area-inset-left, 0px));
     padding-right: calc(10px + var(--tg-safe-area-inset-right, 0px));
-    background: var(--tg-theme-bg-color, #ffffff);
+    background-color: var(--tg-theme-bg-color, #ffffff);
     color: var(--tg-theme-text-color, #000000);
     text-align: center;
     box-sizing: border-box;
