@@ -593,41 +593,8 @@ class PaoPaoGame {
         if (tile1.id !== tile2.id) return false;
         console.log(`Checking connection between tiles at (${tile1.row},${tile1.col}) and (${tile2.row},${tile2.col})`);
         
-        // 1. Adjacent tiles (0 turns)
-        if (this.areTilesAdjacent(tile1, tile2)) {
-            this.path = [
-                { row: tile1.row, col: tile1.col },
-                { row: tile2.row, col: tile2.col }
-            ];
-            console.log('Adjacent connection found');
-            return true;
-        }
-        
-        // 2. Straight line (0 turns)
-        const straightPath = this.findStraightPath(tile1, tile2);
-        if (straightPath) {
-            this.path = straightPath;
-            console.log('Straight line connection found');
-            return true;
-        }
-        
-        // 3. L-shape path (1 turn)
-        const lPath = this.findLShapePath(tile1, tile2);
-        if (lPath) {
-            this.path = lPath;
-            console.log('L-shape connection found');
-            return true;
-        }
-        
-        // 4. U-shape path (2 turns)
-        const uPath = this.findUShapePath(tile1, tile2);
-        if (uPath) {
-            this.path = uPath;
-            console.log('U-shape connection found');
-            return true;
-        }
-        
-        return false;
+        // Use BFS to find path with maximum 2 turns
+        return this.findPathBFS(tile1, tile2);
     }
     
     // Проверяем, касаются ли плитки друг друга
@@ -646,12 +613,20 @@ class PaoPaoGame {
     findPathBFS(tile1, tile2) {
         if (tile1.id !== tile2.id) return false;
         
-        const queue = [];
-        const visited = new Set();
-        const parent = new Map();
+        console.log(`BFS: Searching path from (${tile1.row},${tile1.col}) to (${tile2.row},${tile2.col}), ID: ${tile1.id}`);
         
-        queue.push({ row: tile1.row, col: tile1.col, turns: 0, direction: null });
-        visited.add(`${tile1.row},${tile1.col}`);
+        const queue = [];
+        const visited = new Map(); // Store with turn count for better tracking
+        
+        // Start position with path history
+        queue.push({ 
+            row: tile1.row, 
+            col: tile1.col, 
+            turns: 0, 
+            direction: null,
+            path: [{ row: tile1.row, col: tile1.col }]
+        });
+        visited.set(`${tile1.row},${tile1.col}`, 0);
         
         const directions = [
             { row: -1, col: 0, name: 'up' },
@@ -663,50 +638,69 @@ class PaoPaoGame {
         while (queue.length > 0) {
             const current = queue.shift();
             
+            // Found target
             if (current.row === tile2.row && current.col === tile2.col) {
-                this.path = this.reconstructPath(parent, tile1, tile2);
+                this.path = [...current.path];
+                console.log(`BFS: Path found with ${current.turns} turns:`, this.path);
                 return true;
             }
             
+            // Try all directions
             for (const dir of directions) {
                 const newRow = current.row + dir.row;
                 const newCol = current.col + dir.col;
                 const key = `${newRow},${newCol}`;
                 
-                // 1) Проверка границ 10x16
-                if (!this.isInsideFullGrid(newRow, newCol)) continue;
+                // Check bounds
+                if (!this.isInsideFullGrid(newRow, newCol)) {
+                    console.log(`BFS: (${newRow},${newCol}) - out of bounds`);
+                    continue;
+                }
                 
-                // 2) Уже посещали
-                if (visited.has(key)) continue;
-                
-                // 3) Проверка пустоты клетки (кроме клетки назначения)
+                // Check if cell is passable (empty or target)
                 const isTarget = (newRow === tile2.row && newCol === tile2.col);
-                if (!isTarget && !this.isCellEmpty(newRow, newCol)) continue;
+                const isEmpty = this.isCellEmpty(newRow, newCol);
+                const isFrame = this.isFrameCell(newRow, newCol);
                 
-                // 4) Улучшенная логика подсчета поворотов для L-образных путей
+                if (!isTarget && !isEmpty) {
+                    console.log(`BFS: (${newRow},${newCol}) - blocked (target:${isTarget}, empty:${isEmpty}, frame:${isFrame})`);
+                    continue;
+                }
+                
+                // Calculate turns
                 let newTurns = current.turns;
                 if (current.direction && current.direction !== dir.name) {
                     newTurns++;
                 }
                 
-                // Разрешаем до 2 поворотов (этого достаточно для L-образных путей)
-                if (newTurns > 2) continue;
+                // Max 2 turns allowed
+                if (newTurns > 2) {
+                    console.log(`BFS: (${newRow},${newCol}) - too many turns (${newTurns})`);
+                    continue;
+                }
                 
-                // 5) Добавляем в очередь с приоритетом для путей с меньшим количеством поворотов
+                // Check if we've been here with fewer or equal turns
+                const visitedTurns = visited.get(key);
+                if (visitedTurns !== undefined && visitedTurns <= newTurns) {
+                    console.log(`BFS: (${newRow},${newCol}) - already visited with ${visitedTurns} turns`);
+                    continue;
+                }
+                
+                // Add to queue
+                const newPath = [...current.path, { row: newRow, col: newCol }];
+                console.log(`BFS: Adding (${newRow},${newCol}) to queue with ${newTurns} turns, direction: ${dir.name}`);
                 queue.push({ 
                     row: newRow, 
                     col: newCol, 
                     turns: newTurns, 
                     direction: dir.name,
-                    priority: newTurns // Приоритет для BFS
+                    path: newPath
                 });
-                visited.add(key);
-                parent.set(key, { row: current.row, col: current.col, direction: dir.name });
+                visited.set(key, newTurns);
             }
-            
-            // Сортируем очередь по приоритету (меньше поворотов = выше приоритет)
-            queue.sort((a, b) => (a.priority || 0) - (b.priority || 0));
         }
+        
+        console.log(`BFS: No path found between (${tile1.row},${tile1.col}) and (${tile2.row},${tile2.col})`);
         return false;
     }
     
@@ -735,25 +729,23 @@ class PaoPaoGame {
             return;
         }
 
-        // Сначала показываем линию соединения с видимыми плитками
-        this.showConnectionLine(tile1, tile2);
-        
-        // Помечаем плитки как "исчезающие" чтобы они не участвовали в новых соединениях
-        tile1.disappearing = true;
-        tile2.disappearing = true;
-        
-        // Убираем выделение, но оставляем плитки видимыми
+        // Убираем выделение
         tile1.element.classList.remove('selected');
         tile2.element.classList.remove('selected');
+        
+        // Сначала показываем линию соединения с видимыми плитками
+        this.showConnectionLine(tile1, tile2);
         
         // Воспроизводим звук успеха
         this.playSound('success');
         
         // Задержка перед скрытием плиток (после показа линии)
         setTimeout(() => {
-            // Теперь помечаем плитки как совпавшие
+            // Атомарно помечаем плитки как совпавшие и исчезающие
             tile1.matched = true;
             tile2.matched = true;
+            tile1.disappearing = true;
+            tile2.disappearing = true;
             
             // Обновляем UI - плитки становятся пустыми клетками
             tile1.element.classList.add('empty');
@@ -790,7 +782,18 @@ class PaoPaoGame {
     isCellEmpty(row, col) {
         if (!this.isInsideFullGrid(row, col)) return false;
         const tile = this.board[row]?.[col];
+        
+        // Frame cells (outer border) are always passable for pathfinding
+        if (this.isFrameCell(row, col)) return true;
+        
         return !tile || tile.matched === true || tile.disappearing === true;
+    }
+    
+    // Check if position is in the frame (outer border) area
+    isFrameCell(row, col) {
+        // Frame is the outer border of the full grid
+        return (row === 0 || row === this.boardSize.rows - 1 || 
+                col === 0 || col === this.boardSize.cols - 1);
     }
     
     isPositionEmpty(pos) {
@@ -2115,227 +2118,7 @@ class PaoPaoGame {
         }
     }
 
-    // New improved path finding methods
-    
-    // Check if two tiles can be connected by a straight line (horizontal or vertical)
-    findStraightPath(tile1, tile2) {
-        // Must be on same row or column
-        if (tile1.row !== tile2.row && tile1.col !== tile2.col) {
-            return null;
-        }
-        
-        const path = [{ row: tile1.row, col: tile1.col }];
-        
-        if (tile1.row === tile2.row) {
-            // Horizontal line
-            const startCol = Math.min(tile1.col, tile2.col);
-            const endCol = Math.max(tile1.col, tile2.col);
-            
-            // Check if path is clear (excluding start and end tiles)
-            for (let col = startCol + 1; col < endCol; col++) {
-                if (!this.isCellEmpty(tile1.row, col)) {
-                    return null;
-                }
-            }
-        } else {
-            // Vertical line
-            const startRow = Math.min(tile1.row, tile2.row);
-            const endRow = Math.max(tile1.row, tile2.row);
-            
-            // Check if path is clear (excluding start and end tiles)
-            for (let row = startRow + 1; row < endRow; row++) {
-                if (!this.isCellEmpty(row, tile1.col)) {
-                    return null;
-                }
-            }
-        }
-        
-        path.push({ row: tile2.row, col: tile2.col });
-        return path;
-    }
-    
-    // Check if two tiles can be connected by an L-shape (exactly 1 turn)
-    findLShapePath(tile1, tile2) {
-        // L-shape is only possible if tiles are not on same row AND not on same column
-        if (tile1.row === tile2.row || tile1.col === tile2.col) {
-            return null;
-        }
-        
-        // Try both L-shape orientations
-        
-        // Option 1: Horizontal first, then vertical
-        const corner1 = { row: tile1.row, col: tile2.col };
-        if (this.isCellEmpty(corner1.row, corner1.col)) {
-            // Check horizontal segment
-            const startCol1 = Math.min(tile1.col, corner1.col);
-            const endCol1 = Math.max(tile1.col, corner1.col);
-            let horizontalClear1 = true;
-            for (let col = startCol1 + 1; col < endCol1; col++) {
-                if (!this.isCellEmpty(tile1.row, col)) {
-                    horizontalClear1 = false;
-                    break;
-                }
-            }
-            
-            // Check vertical segment
-            const startRow1 = Math.min(corner1.row, tile2.row);
-            const endRow1 = Math.max(corner1.row, tile2.row);
-            let verticalClear1 = true;
-            for (let row = startRow1 + 1; row < endRow1; row++) {
-                if (!this.isCellEmpty(row, tile2.col)) {
-                    verticalClear1 = false;
-                    break;
-                }
-            }
-            
-            if (horizontalClear1 && verticalClear1) {
-                return [
-                    { row: tile1.row, col: tile1.col },
-                    { row: corner1.row, col: corner1.col },
-                    { row: tile2.row, col: tile2.col }
-                ];
-            }
-        }
-        
-        // Option 2: Vertical first, then horizontal
-        const corner2 = { row: tile2.row, col: tile1.col };
-        if (this.isCellEmpty(corner2.row, corner2.col)) {
-            // Check vertical segment
-            const startRow2 = Math.min(tile1.row, corner2.row);
-            const endRow2 = Math.max(tile1.row, corner2.row);
-            let verticalClear2 = true;
-            for (let row = startRow2 + 1; row < endRow2; row++) {
-                if (!this.isCellEmpty(row, tile1.col)) {
-                    verticalClear2 = false;
-                    break;
-                }
-            }
-            
-            // Check horizontal segment
-            const startCol2 = Math.min(corner2.col, tile2.col);
-            const endCol2 = Math.max(corner2.col, tile2.col);
-            let horizontalClear2 = true;
-            for (let col = startCol2 + 1; col < endCol2; col++) {
-                if (!this.isCellEmpty(tile2.row, col)) {
-                    horizontalClear2 = false;
-                    break;
-                }
-            }
-            
-            if (verticalClear2 && horizontalClear2) {
-                return [
-                    { row: tile1.row, col: tile1.col },
-                    { row: corner2.row, col: corner2.col },
-                    { row: tile2.row, col: tile2.col }
-                ];
-            }
-        }
-        
-        return null;
-    }
-    
-    // Check if two tiles can be connected by a U-shape (exactly 2 turns)
-    findUShapePath(tile1, tile2) {
-        // Try U-shape paths via horizontal lines (same row)
-        for (let row = 0; row < ROWS; row++) {
-            // Skip if it's the same row as either tile (would be L-shape or straight)
-            if (row === tile1.row || row === tile2.row) continue;
-            
-            const path = this.tryUShapeViaLine(tile1, tile2, row, 'row');
-            if (path) {
-                console.log(`U-shape found via horizontal line at row ${row}`);
-                return path;
-            }
-        }
-        
-        // Try U-shape paths via vertical lines (same column)
-        for (let col = 0; col < COLS; col++) {
-            // Skip if it's the same column as either tile (would be L-shape or straight)
-            if (col === tile1.col || col === tile2.col) continue;
-            
-            const path = this.tryUShapeViaLine(tile1, tile2, col, 'col');
-            if (path) {
-                console.log(`U-shape found via vertical line at col ${col}`);
-                return path;
-            }
-        }
-        
-        return null;
-    }
-    
-    // Helper method to try U-shape via specific line (row or column)
-    tryUShapeViaLine(tile1, tile2, linePosition, lineType) {
-        let corner1, corner2;
-        
-        if (lineType === 'row') {
-            // U-shape via horizontal line
-            corner1 = { row: linePosition, col: tile1.col };
-            corner2 = { row: linePosition, col: tile2.col };
-        } else {
-            // U-shape via vertical line
-            corner1 = { row: tile1.row, col: linePosition };
-            corner2 = { row: tile2.row, col: linePosition };
-        }
-        
-        // Check if corner cells are empty
-        if (!this.isCellEmpty(corner1.row, corner1.col) || !this.isCellEmpty(corner2.row, corner2.col)) {
-            return null;
-        }
-        
-        // For U-shape, corner1 and corner2 should be different points
-        if (corner1.row === corner2.row && corner1.col === corner2.col) {
-            return null;
-        }
-        
-        // Check first segment (tile1 to corner1)
-        if (!this.isSegmentClear(tile1, corner1)) {
-            return null;
-        }
-        
-        // Check middle segment (corner1 to corner2)
-        if (!this.isSegmentClear(corner1, corner2)) {
-            return null;
-        }
-        
-        // Check last segment (corner2 to tile2)
-        if (!this.isSegmentClear(corner2, tile2)) {
-            return null;
-        }
-        
-        return [
-            { row: tile1.row, col: tile1.col },
-            { row: corner1.row, col: corner1.col },
-            { row: corner2.row, col: corner2.col },
-            { row: tile2.row, col: tile2.col }
-        ];
-    }
-    
-    // Helper method to check if a segment between two points is clear
-    isSegmentClear(point1, point2) {
-        if (point1.row === point2.row) {
-            // Horizontal segment
-            const startCol = Math.min(point1.col, point2.col);
-            const endCol = Math.max(point1.col, point2.col);
-            for (let col = startCol + 1; col < endCol; col++) {
-                if (!this.isCellEmpty(point1.row, col)) {
-                    return false;
-                }
-            }
-        } else if (point1.col === point2.col) {
-            // Vertical segment
-            const startRow = Math.min(point1.row, point2.row);
-            const endRow = Math.max(point1.row, point2.row);
-            for (let row = startRow + 1; row < endRow; row++) {
-                if (!this.isCellEmpty(row, point1.col)) {
-                    return false;
-                }
-            }
-        } else {
-            // Diagonal segment - not allowed
-            return false;
-        }
-        return true;
-    }
+    // BFS pathfinding is now used exclusively for all connection types
 }
 
 // Добавляем CSS анимации
