@@ -593,8 +593,13 @@ class PaoPaoGame {
         if (tile1.id !== tile2.id) return false;
         console.log(`Checking connection between tiles at (${tile1.row},${tile1.col}) and (${tile2.row},${tile2.col})`);
         
-        // Use BFS to find path with maximum 2 turns
-        return this.findPathBFS(tile1, tile2);
+        // Use the improved algorithm from old implementation
+        const result = this.checkConnection(tile1.row, tile1.col, tile2.row, tile2.col);
+        if (result.ok) {
+            this.path = result.path;
+            return true;
+        }
+        return false;
     }
     
     // Проверяем, касаются ли плитки друг друга
@@ -610,98 +615,364 @@ class PaoPaoGame {
     }
     
     // Поиск в ширину (BFS) по полной сетке 10x16 с улучшенной обработкой L-образных путей
-    findPathBFS(tile1, tile2) {
-        if (tile1.id !== tile2.id) return false;
+    // Main connection checking function based on old implementation
+    checkConnection(i1, j1, i2, j2) {
+        if (!this.isInsideFullGrid(i1, j1) || !this.isInsideFullGrid(i2, j2)) return { ok: false };
+        if ((i1 === i2) && (j1 === j2)) return { ok: false };
+        if (this.board[i1][j1].matched || this.board[i2][j2].matched) return { ok: false };
+        if (this.board[i1][j1].id !== this.board[i2][j2].id) return { ok: false };
         
-        console.log(`BFS: Searching path from (${tile1.row},${tile1.col}) to (${tile2.row},${tile2.col}), ID: ${tile1.id}`);
+        console.log(`Checking connection between (${i1},${j1}) and (${i2},${j2})`);
         
-        const queue = [];
-        const visited = new Map(); // Store with turn count for better tracking
-        
-        // Start position with path history
-        queue.push({ 
-            row: tile1.row, 
-            col: tile1.col, 
-            turns: 0, 
-            direction: null,
-            path: [{ row: tile1.row, col: tile1.col }]
-        });
-        visited.set(`${tile1.row},${tile1.col}`, 0);
-        
-        const directions = [
-            { row: -1, col: 0, name: 'up' },
-            { row: 1, col: 0, name: 'down' },
-            { row: 0, col: -1, name: 'left' },
-            { row: 0, col: 1, name: 'right' }
-        ];
-        
-        while (queue.length > 0) {
-            const current = queue.shift();
-            
-            // Found target
-            if (current.row === tile2.row && current.col === tile2.col) {
-                this.path = [...current.path];
-                console.log(`BFS: Path found with ${current.turns} turns:`, this.path);
-                return true;
-            }
-            
-            // Try all directions
-            for (const dir of directions) {
-                const newRow = current.row + dir.row;
-                const newCol = current.col + dir.col;
-                const key = `${newRow},${newCol}`;
-                
-                // Check bounds
-                if (!this.isInsideFullGrid(newRow, newCol)) {
-                    console.log(`BFS: (${newRow},${newCol}) - out of bounds`);
-                    continue;
-                }
-                
-                // Check if cell is passable (empty or target)
-                const isTarget = (newRow === tile2.row && newCol === tile2.col);
-                const isEmpty = this.isCellEmpty(newRow, newCol);
-                const isFrame = this.isFrameCell(newRow, newCol);
-                
-                if (!isTarget && !isEmpty) {
-                    console.log(`BFS: (${newRow},${newCol}) - blocked (target:${isTarget}, empty:${isEmpty}, frame:${isFrame})`);
-                    continue;
-                }
-                
-                // Calculate turns
-                let newTurns = current.turns;
-                if (current.direction && current.direction !== dir.name) {
-                    newTurns++;
-                }
-                
-                // Max 2 turns allowed
-                if (newTurns > 2) {
-                    console.log(`BFS: (${newRow},${newCol}) - too many turns (${newTurns})`);
-                    continue;
-                }
-                
-                // Check if we've been here with fewer or equal turns
-                const visitedTurns = visited.get(key);
-                if (visitedTurns !== undefined && visitedTurns <= newTurns) {
-                    console.log(`BFS: (${newRow},${newCol}) - already visited with ${visitedTurns} turns`);
-                    continue;
-                }
-                
-                // Add to queue
-                const newPath = [...current.path, { row: newRow, col: newCol }];
-                console.log(`BFS: Adding (${newRow},${newCol}) to queue with ${newTurns} turns, direction: ${dir.name}`);
-                queue.push({ 
-                    row: newRow, 
-                    col: newCol, 
-                    turns: newTurns, 
-                    direction: dir.name,
-                    path: newPath
-                });
-                visited.set(key, newTurns);
-            }
+        // First try inner paths (L-shapes within the board)
+        const innerResult = this.checkInner(i1, j1, i2, j2);
+        if (innerResult.ok) {
+            console.log('Inner path found:', innerResult.path);
+            return innerResult;
         }
         
-        console.log(`BFS: No path found between (${tile1.row},${tile1.col}) and (${tile2.row},${tile2.col})`);
-        return false;
+        // Then try outer paths (through the frame)
+        const outerResult = this.checkOuter(i1, j1, i2, j2);
+        if (outerResult.ok) {
+            console.log('Outer path found:', outerResult.path);
+            return outerResult;
+        }
+        
+        console.log(`No path found between (${i1},${j1}) and (${i2},${j2})`);
+        return { ok: false };
+    }
+    
+    // Check for L-shaped paths within the board boundaries  
+    checkInner(i1, j1, i2, j2) {
+        const self = this;
+        const free = function(i, j) {
+            if (((i === i1) && (j === j1)) || ((i === i2) && (j === j2)))
+                return true;
+            if (!self.isInsideFullGrid(i, j)) return false;
+            const tile = self.board[i][j];
+            if (!tile) return true; // null tiles are considered free
+            return tile.matched || !tile.id;
+        };
+
+        const ifrom = Math.min(i1, i2);
+        const ito = Math.max(i1, i2);
+        const jfrom = Math.min(j1, j2);
+        const jto = Math.max(j1, j2);
+
+        // Try horizontal-then-vertical L-shapes
+        for (let ti = ifrom; ti <= ito; ti++) {
+            let ok = true;
+            
+            // Check path from (i1,j1) to (ti,j1)
+            const startI = Math.min(i1, ti);
+            const endI = Math.max(i1, ti);
+            for (let i = startI; i <= endI; i++) {
+                if (!free(i, j1)) {
+                    ok = false;
+                    break;
+                }
+            }
+            
+            // Check path from (ti,j1) to (ti,j2)  
+            if (ok) {
+                const startJ = Math.min(j1, j2);
+                const endJ = Math.max(j1, j2);
+                for (let j = startJ; j <= endJ; j++) {
+                    if (!free(ti, j)) {
+                        ok = false;
+                        break;
+                    }
+                }
+            }
+            
+            // Check path from (ti,j2) to (i2,j2)
+            if (ok) {
+                const startI2 = Math.min(ti, i2);
+                const endI2 = Math.max(ti, i2);
+                for (let i = startI2; i <= endI2; i++) {
+                    if (!free(i, j2)) {
+                        ok = false;
+                        break;
+                    }
+                }
+            }
+
+            if (ok) {
+                return {
+                    ok: true, 
+                    path: [
+                        { row: i1, col: j1 }, 
+                        { row: ti, col: j1 }, 
+                        { row: ti, col: j2 }, 
+                        { row: i2, col: j2 }
+                    ]
+                };
+            }
+        }
+
+        // Try vertical-then-horizontal L-shapes
+        for (let tj = jfrom; tj <= jto; tj++) {
+            let ok = true;
+            
+            // Check path from (i1,j1) to (i1,tj)
+            const startJ = Math.min(j1, tj);
+            const endJ = Math.max(j1, tj);
+            for (let j = startJ; j <= endJ; j++) {
+                if (!free(i1, j)) {
+                    ok = false;
+                    break;
+                }
+            }
+            
+            // Check path from (i1,tj) to (i2,tj)
+            if (ok) {
+                const startI = Math.min(i1, i2);
+                const endI = Math.max(i1, i2);
+                for (let i = startI; i <= endI; i++) {
+                    if (!free(i, tj)) {
+                        ok = false;
+                        break;
+                    }
+                }
+            }
+            
+            // Check path from (i2,tj) to (i2,j2)
+            if (ok) {
+                const startJ2 = Math.min(tj, j2);
+                const endJ2 = Math.max(tj, j2);
+                for (let j = startJ2; j <= endJ2; j++) {
+                    if (!free(i2, j)) {
+                        ok = false;
+                        break;
+                    }
+                }
+            }
+
+            if (ok) {
+                return {
+                    ok: true, 
+                    path: [
+                        { row: i1, col: j1 }, 
+                        { row: i1, col: tj }, 
+                        { row: i2, col: tj }, 
+                        { row: i2, col: j2 }
+                    ]
+                };
+            }
+        }
+
+        return { ok: false };
+    }
+    
+    // Check for paths that go through the outer frame area
+    checkOuter(i1, j1, i2, j2) {
+        const self = this;
+        const free = function(i, j) {
+            // Frame cells are always passable
+            if ((i === -1) || (i === self.boardSize.rows) || (j === -1) || (j === self.boardSize.cols))
+                return true;
+            if (((i === i1) && (j === j1)) || ((i === i2) && (j === j2)))
+                return true;
+            if (!self.isInsideFullGrid(i, j)) return false;
+            const tile = self.board[i][j];
+            if (!tile) return true; // null tiles are considered free
+            return tile.matched || !tile.id;
+        };
+
+        const ifrom = Math.min(i1, i2);
+        const ito = Math.max(i1, i2);
+        const jfrom = Math.min(j1, j2);  
+        const jto = Math.max(j1, j2);
+
+        // Try paths above the board
+        for (let dt = 1; dt <= this.boardSize.rows; dt++) {
+            const ti = ifrom - dt;
+            if (ti >= -1) {
+                let ok = true;
+                
+                // Check path from (i1,j1) up to (ti,j1)
+                for (let i = i1; i >= ti; i--) {
+                    if (!free(i, j1)) {
+                        ok = false;
+                        break;
+                    }
+                }
+                
+                // Check path from (i2,j2) up to (ti,j2)  
+                if (ok) {
+                    for (let i = i2; i >= ti; i--) {
+                        if (!free(i, j2)) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+                
+                // Check horizontal path at level ti
+                if (ok) {
+                    for (let j = jfrom; j <= jto; j++) {
+                        if (!free(ti, j)) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (ok) {
+                    return {
+                        ok: true,
+                        path: [
+                            { row: i1, col: j1 }, 
+                            { row: ti, col: j1 }, 
+                            { row: ti, col: j2 }, 
+                            { row: i2, col: j2 }
+                        ]
+                    };
+                }
+            }
+            
+            // Try paths below the board
+            const ti2 = ito + dt;
+            if (ti2 <= this.boardSize.rows) {
+                let ok = true;
+                
+                // Check path from (i1,j1) down to (ti2,j1)
+                for (let i = i1; i <= ti2; i++) {
+                    if (!free(i, j1)) {
+                        ok = false;
+                        break;
+                    }
+                }
+                
+                // Check path from (i2,j2) down to (ti2,j2)
+                if (ok) {
+                    for (let i = i2; i <= ti2; i++) {
+                        if (!free(i, j2)) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+                
+                // Check horizontal path at level ti2
+                if (ok) {
+                    for (let j = jfrom; j <= jto; j++) {
+                        if (!free(ti2, j)) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (ok) {
+                    return {
+                        ok: true,
+                        path: [
+                            { row: i1, col: j1 }, 
+                            { row: ti2, col: j1 }, 
+                            { row: ti2, col: j2 }, 
+                            { row: i2, col: j2 }
+                        ]
+                    };
+                }
+            }
+        }
+
+        // Try paths to the left of the board
+        for (let dt = 1; dt <= this.boardSize.cols; dt++) {
+            const tj = jfrom - dt;
+            if (tj >= -1) {
+                let ok = true;
+                
+                // Check path from (i1,j1) left to (i1,tj)
+                for (let j = j1; j >= tj; j--) {
+                    if (!free(i1, j)) {
+                        ok = false;
+                        break;
+                    }
+                }
+                
+                // Check path from (i2,j2) left to (i2,tj)
+                if (ok) {
+                    for (let j = j2; j >= tj; j--) {
+                        if (!free(i2, j)) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+                
+                // Check vertical path at column tj
+                if (ok) {
+                    for (let i = ifrom; i <= ito; i++) {
+                        if (!free(i, tj)) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (ok) {
+                    return {
+                        ok: true,
+                        path: [
+                            { row: i1, col: j1 }, 
+                            { row: i1, col: tj }, 
+                            { row: i2, col: tj }, 
+                            { row: i2, col: j2 }
+                        ]
+                    };
+                }
+            }
+            
+            // Try paths to the right of the board
+            const tj2 = jto + dt;
+            if (tj2 <= this.boardSize.cols) {
+                let ok = true;
+                
+                // Check path from (i1,j1) right to (i1,tj2)
+                for (let j = j1; j <= tj2; j++) {
+                    if (!free(i1, j)) {
+                        ok = false;
+                        break;
+                    }
+                }
+                
+                // Check path from (i2,j2) right to (i2,tj2)
+                if (ok) {
+                    for (let j = j2; j <= tj2; j++) {
+                        if (!free(i2, j)) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+                
+                // Check vertical path at column tj2
+                if (ok) {
+                    for (let i = ifrom; i <= ito; i++) {
+                        if (!free(i, tj2)) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                }
+                
+                if (ok) {
+                    return {
+                        ok: true,
+                        path: [
+                            { row: i1, col: j1 }, 
+                            { row: i1, col: tj2 }, 
+                            { row: i2, col: tj2 }, 
+                            { row: i2, col: j2 }
+                        ]
+                    };
+                }
+            }
+        }
+
+        return { ok: false };
     }
     
     // Восстанавливаем путь для отображения
