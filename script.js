@@ -51,6 +51,7 @@ class PaoPaoGame {
         this.gameTimer = null;
         this.isPaused = false;
         this.isGameOver = false;
+        this.processingConnection = false;
         this.sounds = {};
         this.soundEnabled = true;
         this.path = []; // Путь для отображения
@@ -550,6 +551,9 @@ class PaoPaoGame {
     handleTileClick(row, col) {
         if (this.isGameOver || this.isPaused || this.isShuffling || this.isSolving) return;
 
+        // Prevent rapid clicking during tile processing
+        if (this.processingConnection) return;
+
         const tile = this.board[row][col];
         if (!tile || tile.matched || tile.disappearing) return;
         
@@ -570,6 +574,10 @@ class PaoPaoGame {
             console.log('Same tile clicked, deselected');
         } else if (this.selectedTile.id === tile.id) {
             console.log('Matching tiles found, checking connection...');
+            
+            // Set processing flag to prevent rapid clicks
+            this.processingConnection = true;
+            
             if (this.canConnect(this.selectedTile, tile)) {
                 console.log('Connection successful!');
                 this.connectTiles(this.selectedTile, tile);
@@ -578,6 +586,8 @@ class PaoPaoGame {
                 this.showConnectionError();
                 // Haptic feedback for wrong move
                 this.triggerWrongMoveHapticFeedback();
+                // Clear processing flag since connection failed
+                this.processingConnection = false;
             }
         } else {
             console.log('Different tile type, switching selection');
@@ -1046,6 +1056,7 @@ class PaoPaoGame {
         }, 200); // Скрываем плитки через 1.2 секунды (когда линия исчезает)
         
         this.selectedTile = null;
+        this.processingConnection = false;
     }
 
     isInsideFullGrid(row, col) {
@@ -1340,6 +1351,7 @@ class PaoPaoGame {
         }, 500);
         
         this.selectedTile = null;
+        this.processingConnection = false;
     }
     
     startTimer() {
@@ -1696,6 +1708,7 @@ class PaoPaoGame {
         this.selectedTile = null;
         this.isPaused = false;
         this.isGameOver = false;
+        this.processingConnection = false;
         
         // Reset hearts for new game
         this.hearts = this.maxHearts;
@@ -2339,6 +2352,7 @@ class PaoPaoGame {
         this.selectedTile = null;
         this.isPaused = false;
         this.isGameOver = false;
+        this.processingConnection = false;
         
         // Don't reset hearts here - they carry over from previous level
         
