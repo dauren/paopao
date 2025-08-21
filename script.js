@@ -551,7 +551,7 @@ class PaoPaoGame {
         if (this.isGameOver || this.isPaused || this.isShuffling || this.isSolving) return;
 
         const tile = this.board[row][col];
-        if (!tile || tile.matched) return;
+        if (!tile || tile.matched || tile.disappearing) return;
         
         // Воспроизводим звук клика
         this.playSound('click');
@@ -651,6 +651,7 @@ class PaoPaoGame {
             if (!self.isInsideFullGrid(i, j)) return false;
             const tile = self.board[i][j];
             if (!tile) return true; // null tiles are considered free
+            if (tile.disappearing) return false; // disappearing tiles block paths
             return tile.matched || !tile.id;
         };
 
@@ -776,6 +777,7 @@ class PaoPaoGame {
             if (!self.isInsideFullGrid(i, j)) return false;
             const tile = self.board[i][j];
             if (!tile) return true; // null tiles are considered free
+            if (tile.disappearing) return false; // disappearing tiles block paths
             return tile.matched || !tile.id;
         };
 
@@ -1004,19 +1006,21 @@ class PaoPaoGame {
         tile1.element.classList.remove('selected');
         tile2.element.classList.remove('selected');
         
+        // Немедленно помечаем плитки как исчезающие, чтобы предотвратить повторные клики
+        tile1.disappearing = true;
+        tile2.disappearing = true;
+        
         // Сначала показываем линию соединения с видимыми плитками
         this.showConnectionLine(tile1, tile2);
         
         // Воспроизводим звук успеха
         this.playSound('success');
         
-        // Задержка перед скрытием плиток (после показа линии)
+        // Задержка перед окончательным скрытием плиток (после показа линии)
         setTimeout(() => {
-            // Атомарно помечаем плитки как совпавшие и исчезающие
+            // Окончательно помечаем плитки как совпавшие
             tile1.matched = true;
             tile2.matched = true;
-            tile1.disappearing = true;
-            tile2.disappearing = true;
             
             // Обновляем UI - плитки становятся пустыми клетками
             tile1.element.classList.add('empty');
