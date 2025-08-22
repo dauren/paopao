@@ -51,7 +51,6 @@ class PaoPaoGame {
         this.gameTimer = null;
         this.isPaused = false;
         this.isGameOver = false;
-        this.processingConnection = false;
         this.sounds = {};
         this.soundEnabled = true;
         this.path = []; // Путь для отображения
@@ -551,11 +550,9 @@ class PaoPaoGame {
     handleTileClick(row, col) {
         if (this.isGameOver || this.isPaused || this.isShuffling || this.isSolving) return;
 
-        // Prevent rapid clicking during tile processing
-        if (this.processingConnection) return;
 
         const tile = this.board[row][col];
-        if (!tile || tile.matched || tile.disappearing) return;
+        if (!tile || tile.matched) return;
         
         // Воспроизводим звук клика
         this.playSound('click');
@@ -575,9 +572,6 @@ class PaoPaoGame {
         } else if (this.selectedTile.id === tile.id) {
             console.log('Matching tiles found, checking connection...');
             
-            // Set processing flag to prevent rapid clicks
-            this.processingConnection = true;
-            
             if (this.canConnect(this.selectedTile, tile)) {
                 console.log('Connection successful!');
                 this.connectTiles(this.selectedTile, tile);
@@ -586,8 +580,6 @@ class PaoPaoGame {
                 this.showConnectionError();
                 // Haptic feedback for wrong move
                 this.triggerWrongMoveHapticFeedback();
-                // Clear processing flag since connection failed
-                this.processingConnection = false;
             }
         } else {
             console.log('Different tile type, switching selection');
@@ -661,7 +653,6 @@ class PaoPaoGame {
             if (!self.isInsideFullGrid(i, j)) return false;
             const tile = self.board[i][j];
             if (!tile) return true; // null tiles are considered free
-            if (tile.disappearing) return false; // disappearing tiles block paths
             return tile.matched || !tile.id;
         };
 
@@ -787,7 +778,6 @@ class PaoPaoGame {
             if (!self.isInsideFullGrid(i, j)) return false;
             const tile = self.board[i][j];
             if (!tile) return true; // null tiles are considered free
-            if (tile.disappearing) return false; // disappearing tiles block paths
             return tile.matched || !tile.id;
         };
 
@@ -1016,47 +1006,42 @@ class PaoPaoGame {
         tile1.element.classList.remove('selected');
         tile2.element.classList.remove('selected');
         
-        // Немедленно помечаем плитки как исчезающие, чтобы предотвратить повторные клики
-        tile1.disappearing = true;
-        tile2.disappearing = true;
+        // Немедленно помечаем плитки как совпавшие
+        tile1.matched = true;
+        tile2.matched = true;
         
-        // Сначала показываем линию соединения с видимыми плитками
+        // Обновляем UI - плитки становятся пустыми клетками
+        tile1.element.classList.add('empty');
+        tile2.element.classList.add('empty');
+        
+        // Убираем изображения из пустых клеток
+        const img1 = tile1.element.querySelector('img');
+        const img2 = tile2.element.querySelector('img');
+        if (img1) img1.style.display = 'none';
+        if (img2) img2.style.display = 'none';
+        
+        // Показываем линию соединения
         this.showConnectionLine(tile1, tile2);
+        
+        // Увеличиваем счет
+        this.score += 10;
+        this.updateScore();
         
         // Воспроизводим звук успеха
         this.playSound('success');
         
-        // Задержка перед окончательным скрытием плиток (после показа линии)
-        setTimeout(() => {
-            // Окончательно помечаем плитки как совпавшие
-            tile1.matched = true;
-            tile2.matched = true;
-            
-            // Обновляем UI - плитки становятся пустыми клетками
-            tile1.element.classList.add('empty');
-            tile2.element.classList.add('empty');
-            
-            // Убираем изображения из пустых клеток
-            const img1 = tile1.element.querySelector('img');
-            const img2 = tile2.element.querySelector('img');
-            if (img1) img1.style.display = 'none';
-            if (img2) img2.style.display = 'none';
-            
-            // Увеличиваем счет
-            this.score += 10;
-            this.updateScore();
-            
-            // Проверяем, закончилась ли игра
-            this.checkGameEnd();
-            
-            // Проверяем наличие доступных ходов только если игра не закончена
-            if (!this.isGameOver) {
-                this.checkAndHandleNoMoves();
-            }
-        }, 200); // Скрываем плитки через 1.2 секунды (когда линия исчезает)
+        // Haptic feedback for successful match
+        this.triggerMatchHapticFeedback();
+        
+        // Проверяем, закончилась ли игра
+        this.checkGameEnd();
+        
+        // Проверяем наличие доступных ходов только если игра не закончена
+        if (!this.isGameOver) {
+            this.checkAndHandleNoMoves();
+        }
         
         this.selectedTile = null;
-        this.processingConnection = false;
     }
 
     isInsideFullGrid(row, col) {
@@ -1351,7 +1336,6 @@ class PaoPaoGame {
         }, 500);
         
         this.selectedTile = null;
-        this.processingConnection = false;
     }
     
     startTimer() {
@@ -1708,7 +1692,6 @@ class PaoPaoGame {
         this.selectedTile = null;
         this.isPaused = false;
         this.isGameOver = false;
-        this.processingConnection = false;
         
         // Reset hearts for new game
         this.hearts = this.maxHearts;
@@ -2352,7 +2335,6 @@ class PaoPaoGame {
         this.selectedTile = null;
         this.isPaused = false;
         this.isGameOver = false;
-        this.processingConnection = false;
         
         // Don't reset hearts here - they carry over from previous level
         
