@@ -84,24 +84,179 @@ class PaoPaoGame {
     }
     
     initializeSounds() {
-        // Инициализируем звуки
+        // Initialize Web Audio API for better control
+        this.initializeWebAudio();
+        
+        // Инициализируем звуки с music-friendly настройками
         this.sounds = {
             gameover: new Audio('sounds/gameover.mp3'),
             levelcomplited: new Audio('sounds/levelcomplited.mp3'),
             pause: new Audio('sounds/pause.mp3'),
             savegame: new Audio('sounds/savegame.mp3'),
-            success: new Audio('sounds/successstep.mp3'),
+            success: new Audio('sounds/connected.mp3'),
             wrong: new Audio('sounds/wrongstep.mp3'),
             victory: new Audio('sounds/victory.mp3'),
             shuffle: new Audio('sounds/shuffle.mp3'),
-            click: new Audio('sounds/successstep.mp3'), // Используем существующий звук для клика
+            click: new Audio('sounds/successstep.mp3'),
         };
         
-        // Предзагружаем звуки
+        // Configure sounds for music coexistence
+        this.configureSoundsForMusic();
+        
+        // Detect if user is playing background music
+        this.detectBackgroundMusic();
+    }
+    
+    initializeWebAudio() {
+        try {
+            // Create Web Audio context for advanced control
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.masterGain = this.audioContext.createGain();
+            this.masterGain.connect(this.audioContext.destination);
+            
+            // Create compressor to prevent clipping with background music
+            this.compressor = this.audioContext.createDynamicsCompressor();
+            this.compressor.threshold.setValueAtTime(-24, this.audioContext.currentTime);
+            this.compressor.knee.setValueAtTime(30, this.audioContext.currentTime);
+            this.compressor.ratio.setValueAtTime(12, this.audioContext.currentTime);
+            this.compressor.attack.setValueAtTime(0.003, this.audioContext.currentTime);
+            this.compressor.release.setValueAtTime(0.25, this.audioContext.currentTime);
+            
+            this.compressor.connect(this.masterGain);
+            
+            console.log('Web Audio initialized for music-friendly playback');
+        } catch (e) {
+            console.log('Web Audio not available, using fallback audio system');
+            this.audioContext = null;
+        }
+    }
+    
+    configureSoundsForMusic() {
         Object.values(this.sounds).forEach(sound => {
+            // Lower volumes to not compete with music
+            sound.volume = this.hasMusicPlaying ? 0.25 : 0.35;
+            
+            // Prevent sounds from interrupting music
+            sound.preload = 'auto';
+            
+            // Load sounds
             sound.load();
-            sound.volume = 0.5;
+            
+            // Add event listeners for music detection
+            sound.addEventListener('play', () => {
+                this.onSoundPlay(sound);
+            });
         });
+    }
+    
+    detectBackgroundMusic() {
+        this.hasMusicPlaying = false;
+        
+        // Method 1: Check for Web Audio API usage by other apps
+        if (this.audioContext) {
+            // Monitor audio context state changes
+            this.audioContext.addEventListener('statechange', () => {
+                if (this.audioContext.state === 'suspended') {
+                    // Audio might be suspended due to competing audio
+                    this.adjustForBackgroundMusic(true);
+                }
+            });
+        }
+        
+        // Method 2: Listen for visibility changes (user might switch to music app)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // User switched apps, might be adjusting music
+                setTimeout(() => {
+                    this.checkForMusicPlayback();
+                }, 1000);
+            }
+        });
+        
+        // Method 3: Check for media session API usage
+        this.checkMediaSession();
+        
+        // Method 4: Start with conservative audio levels
+        this.adjustForBackgroundMusic(true); // Assume music is playing initially
+        
+        // Method 5: Use Telegram Web App settings if available
+        this.checkTelegramAudioSettings();
+    }
+    
+    checkForMusicPlayback() {
+        try {
+            // Check if there are other audio elements playing
+            const audioElements = document.querySelectorAll('audio, video');
+            let musicDetected = false;
+            
+            audioElements.forEach(element => {
+                if (!element.paused && element !== this.currentGameSound) {
+                    musicDetected = true;
+                }
+            });
+            
+            // Check for Web Audio nodes that might indicate music
+            if (this.audioContext && this.audioContext.state === 'running') {
+                // Look for signs of other audio processing
+                const baseLatency = this.audioContext.baseLatency || 0;
+                if (baseLatency > 0.01) { // Indicates audio processing load
+                    musicDetected = true;
+                }
+            }
+            
+            this.adjustForBackgroundMusic(musicDetected);
+            
+        } catch (e) {
+            // Fallback to conservative approach
+            this.adjustForBackgroundMusic(true);
+        }
+    }
+    
+    checkMediaSession() {
+        // Check if Media Session API is being used (indicates music apps)
+        if ('mediaSession' in navigator) {
+            try {
+                // If there's already media session metadata, music might be playing
+                if (navigator.mediaSession.metadata) {
+                    this.adjustForBackgroundMusic(true);
+                }
+            } catch (e) {
+                // Media Session API not fully supported
+            }
+        }
+    }
+    
+    adjustForBackgroundMusic(musicDetected) {
+        const wasPlayingMusic = this.hasMusicPlaying;
+        this.hasMusicPlaying = musicDetected;
+        
+        if (musicDetected !== wasPlayingMusic) {
+            console.log(`Background music ${musicDetected ? 'detected' : 'not detected'}, adjusting game audio`);
+            
+            // Adjust all sound volumes
+            Object.values(this.sounds).forEach(sound => {
+                sound.volume = musicDetected ? 0.2 : 0.35;
+            });
+            
+            // Adjust Web Audio gain if available
+            if (this.masterGain) {
+                const targetGain = musicDetected ? 0.3 : 0.6;
+                this.masterGain.gain.setTargetAtTime(
+                    targetGain, 
+                    this.audioContext.currentTime, 
+                    0.1
+                );
+            }
+        }
+    }
+    
+    onSoundPlay(sound) {
+        this.currentGameSound = sound;
+        
+        // Resume audio context if suspended (user gesture requirement)
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume();
+        }
     }
     
     // Haptic feedback for matched tiles
@@ -245,8 +400,122 @@ class PaoPaoGame {
     
     playSound(soundName) {
         if (this.soundEnabled && this.sounds[soundName]) {
-            this.sounds[soundName].currentTime = 0;
-            this.sounds[soundName].play().catch(e => console.log('Звук не может быть воспроизведен:', e));
+            const sound = this.sounds[soundName];
+            
+            // Smart volume adjustment based on background music
+            this.adjustSoundForContext(sound, soundName);
+            
+            // Reset and play with music-friendly settings
+            sound.currentTime = 0;
+            
+            // Use Web Audio API if available for better control
+            if (this.audioContext && !this.hasMusicPlaying) {
+                this.playWithWebAudio(sound, soundName);
+            } else {
+                // Fallback to regular HTML5 audio with ducking
+                this.playWithDucking(sound, soundName);
+            }
+        }
+    }
+    
+    adjustSoundForContext(sound, soundName) {
+        // Different volume levels based on sound type and music presence
+        const soundTypes = {
+            'click': { normal: 0.3, withMusic: 0.15 },
+            'success': { normal: 0.35, withMusic: 0.2 },
+            'wrong': { normal: 0.4, withMusic: 0.2 },
+            'gameover': { normal: 0.5, withMusic: 0.25 },
+            'levelcomplited': { normal: 0.6, withMusic: 0.3 },
+            'victory': { normal: 0.7, withMusic: 0.35 },
+            'pause': { normal: 0.3, withMusic: 0.15 },
+            'shuffle': { normal: 0.4, withMusic: 0.2 },
+            'savegame': { normal: 0.3, withMusic: 0.15 }
+        };
+        
+        const soundConfig = soundTypes[soundName] || { normal: 0.35, withMusic: 0.2 };
+        sound.volume = this.hasMusicPlaying ? soundConfig.withMusic : soundConfig.normal;
+    }
+    
+    playWithWebAudio(sound, soundName) {
+        try {
+            // Create audio source from HTML5 audio element
+            if (!sound.webAudioSource) {
+                sound.webAudioSource = this.audioContext.createMediaElementSource(sound);
+                sound.webAudioGain = this.audioContext.createGain();
+                
+                // Connect through compressor to prevent clipping
+                sound.webAudioSource.connect(sound.webAudioGain);
+                sound.webAudioGain.connect(this.compressor);
+            }
+            
+            // Apply dynamic gain control
+            const baseGain = this.hasMusicPlaying ? 0.3 : 0.8;
+            sound.webAudioGain.gain.setValueAtTime(baseGain, this.audioContext.currentTime);
+            
+            sound.play().catch(e => console.log('WebAudio sound playback failed:', e));
+        } catch (e) {
+            // Fallback to regular playback
+            this.playWithDucking(sound, soundName);
+        }
+    }
+    
+    playWithDucking(sound, soundName) {
+        // Apply audio ducking - briefly lower background audio if possible
+        if (this.hasMusicPlaying && this.masterGain) {
+            // Temporarily reduce overall game audio to make room for this sound
+            const originalGain = this.masterGain.gain.value;
+            const duckGain = originalGain * 0.7;
+            
+            // Quick duck
+            this.masterGain.gain.setValueAtTime(duckGain, this.audioContext.currentTime);
+            this.masterGain.gain.setTargetAtTime(originalGain, this.audioContext.currentTime + 0.1, 0.2);
+        }
+        
+        // Play the sound
+        sound.play().catch(e => {
+            console.log('Sound playback failed:', e);
+            // Re-check for music if audio fails (might indicate competing audio)
+            this.checkForMusicPlayback();
+        });
+        
+        // Mark this as current game sound
+        this.currentGameSound = sound;
+    }
+    
+    checkTelegramAudioSettings() {
+        // Check Telegram Web App environment for audio preferences
+        if (tg && tg.initDataUnsafe) {
+            try {
+                // Check if user has specific audio preferences in Telegram
+                const userData = tg.initDataUnsafe.user;
+                if (userData && userData.allows_write_to_pm === false) {
+                    // User has restrictive settings, be extra conservative with audio
+                    this.adjustForBackgroundMusic(true);
+                    this.preferHapticOverAudio = true;
+                    console.log('Telegram user prefers minimal audio disruption');
+                }
+            } catch (e) {
+                console.log('Could not check Telegram audio preferences');
+            }
+        }
+    }
+    
+    // Enhanced sound method that prioritizes haptic feedback when music is detected
+    playSoundOrHaptic(soundName, hapticType = 'light') {
+        // If music is playing and we prefer haptic, use haptic instead of sound
+        if (this.hasMusicPlaying && this.preferHapticOverAudio) {
+            this.triggerGameEventHapticFeedback(hapticType);
+            return;
+        }
+        
+        // Otherwise play sound normally
+        this.playSound(soundName);
+        
+        // Also add haptic for enhanced feedback
+        if (soundName === 'success') {
+            this.triggerHapticFeedback();
+        } else if (soundName === 'wrong') {
+            this.triggerWrongMoveHapticFeedback();
         }
     }
     
@@ -1001,8 +1270,8 @@ class PaoPaoGame {
         this.score += 10;
         this.updateScore();
         
-        // Воспроизводим звук успеха
-        this.playSound('success');
+        // Воспроизводим звук успеха (с учетом фоновой музыки)
+        this.playSoundOrHaptic('success', 'success');
         
         // Haptic feedback for successful match
         this.triggerHapticFeedback();
@@ -1053,22 +1322,90 @@ class PaoPaoGame {
     }
     
     showConnectionLine(tile1, tile2) {
-        // Очищаем предыдущие линии
-        const oldLines = document.querySelectorAll('.path-line');
-        oldLines.forEach(line => line.remove());
+        // Instant visual feedback with screen flash and tile highlights
+        this.createInstantFlash(tile1, tile2);
         
-        // Если плитки касаются друг друга, рисуем прямую линию
+        // Очищаем предыдущие линии и эффекты
+        this.clearAllLightningEffects();
+        
+        // Если плитки касаются друг друга, рисуем прямую молнию
         if (this.areTilesAdjacent(tile1, tile2)) {
-            this.drawDirectLine(tile1, tile2);
+            this.drawLightningLine(tile1, tile2);
             return;
         }
         
         if (this.path && this.path.length > 0) {
-            this.drawPathThroughEmptyCells();
+            this.drawLightningPath();
         } else {
-            // Если путь не найден, рисуем прямую линию между плитками
-            this.drawDirectLine(tile1, tile2);
+            // Если путь не найден, рисуем прямую молнию между плитками
+            this.drawLightningLine(tile1, tile2);
         }
+    }
+    
+    // Create instant visual feedback
+    createInstantFlash(tile1, tile2) {
+        // Flash the screen
+        const flash = document.createElement('div');
+        flash.className = 'lightning-instant-flash';
+        
+        // Calculate center point between tiles for flash origin
+        const gameBoard = document.getElementById('gameBoard');
+        const boardRect = gameBoard.getBoundingClientRect();
+        const cellWidth = boardRect.width / 10;
+        const cellHeight = boardRect.height / 16;
+        
+        const tile1X = tile1.col * cellWidth + cellWidth / 2;
+        const tile1Y = tile1.row * cellHeight + cellHeight / 2;
+        const tile2X = tile2.col * cellWidth + cellWidth / 2;
+        const tile2Y = tile2.row * cellHeight + cellHeight / 2;
+        
+        const centerX = (tile1X + tile2X) / 2;
+        const centerY = (tile1Y + tile2Y) / 2;
+        
+        const flashX = ((boardRect.left + centerX) / window.innerWidth) * 100;
+        const flashY = ((boardRect.top + centerY) / window.innerHeight) * 100;
+        
+        flash.style.setProperty('--flash-x', `${flashX}%`);
+        flash.style.setProperty('--flash-y', `${flashY}%`);
+        
+        document.body.appendChild(flash);
+        
+        // Flash the tiles themselves
+        this.createTileFlash(tile1, boardRect, cellWidth, cellHeight);
+        this.createTileFlash(tile2, boardRect, cellWidth, cellHeight);
+        
+        // Remove flash after animation
+        setTimeout(() => {
+            flash.remove();
+        }, 150);
+    }
+    
+    // Create tile flash effect
+    createTileFlash(tile, boardRect, cellWidth, cellHeight) {
+        const tileFlash = document.createElement('div');
+        tileFlash.className = 'tile-flash';
+        
+        const x = tile.col * cellWidth;
+        const y = tile.row * cellHeight;
+        
+        tileFlash.style.position = 'fixed';
+        tileFlash.style.left = `${boardRect.left + x}px`;
+        tileFlash.style.top = `${boardRect.top + y}px`;
+        tileFlash.style.width = `${cellWidth}px`;
+        tileFlash.style.height = `${cellHeight}px`;
+        
+        document.body.appendChild(tileFlash);
+        
+        // Remove after animation
+        setTimeout(() => {
+            tileFlash.remove();
+        }, 200);
+    }
+    
+    clearAllLightningEffects() {
+        // Удаляем все старые эффекты (but not instant flash effects)
+        const oldEffects = document.querySelectorAll('.path-line, .lightning-container, .lightning-bolt, .lightning-glow, .energy-particle, .lightning-jagged');
+        oldEffects.forEach(effect => effect.remove());
     }
     
     // Проверяем, является ли путь L-образным
@@ -1099,36 +1436,9 @@ class PaoPaoGame {
         return hasHorizontal && hasVertical;
     }
     
-    // Рисуем путь через пустые клетки (теперь для полной доски 10x16, строго по сетке)
+    // Legacy function - now redirects to lightning path
     drawPathThroughEmptyCells() {
-        const gameBoard = document.getElementById('gameBoard');
-        const boardRect = gameBoard.getBoundingClientRect();
-        
-        // Calculate grid cell dimensions
-        const cellWidth = boardRect.width / 10; // 10 columns
-        const cellHeight = boardRect.height / 16; // 16 rows
-        
-        // Рисуем линии между последовательными точками пути строго по сетке
-        for (let i = 0; i < this.path.length - 1; i++) {
-            const current = this.path[i];
-            const next = this.path[i + 1];
-            
-            // Определяем направление движения
-            const isHorizontal = current.row === next.row;
-            const isVertical = current.col === next.col;
-            
-            if (isHorizontal) {
-                // Горизонтальная линия
-                this.drawHorizontalLineGrid(current, next, cellWidth, cellHeight, boardRect);
-            } else if (isVertical) {
-                // Вертикальная линия
-                this.drawVerticalLineGrid(current, next, cellWidth, cellHeight, boardRect);
-            }
-        }
-        
-        setTimeout(() => {
-            document.querySelectorAll('.path-line').forEach(line => line.remove());
-        }, 1200);
+        this.drawLightningPath();
     }
     
     
@@ -1241,8 +1551,8 @@ class PaoPaoGame {
         document.body.appendChild(line);
     }
     
-    // Рисуем прямую линию между плитками для CSS Grid
-    drawDirectLine(tile1, tile2) {
+    // Lightning path drawing for complete path
+    drawLightningPath() {
         const gameBoard = document.getElementById('gameBoard');
         const boardRect = gameBoard.getBoundingClientRect();
         
@@ -1250,30 +1560,282 @@ class PaoPaoGame {
         const cellWidth = boardRect.width / 10; // 10 columns
         const cellHeight = boardRect.height / 16; // 16 rows
         
-        // Определяем направление движения
-        const isHorizontal = tile1.row === tile2.row;
-        const isVertical = tile1.col === tile2.col;
-        
-        if (isHorizontal) {
-            // Горизонтальная линия
-            this.drawHorizontalLineGrid(
-                { row: tile1.row, col: tile1.col },
-                { row: tile2.row, col: tile2.col },
-                cellWidth, cellHeight, boardRect
-            );
-        } else if (isVertical) {
-            // Вертикальная линия
-            this.drawVerticalLineGrid(
-                { row: tile1.row, col: tile1.col },
-                { row: tile2.row, col: tile2.col },
-                cellWidth, cellHeight, boardRect
-            );
+        // Draw lightning segments for each part of the path
+        for (let i = 0; i < this.path.length - 1; i++) {
+            const current = this.path[i];
+            const next = this.path[i + 1];
+            
+            // Much faster chaining effect
+            setTimeout(() => {
+                this.drawLightningSegment(current, next, cellWidth, cellHeight, boardRect, i);
+            }, i * 30); // Reduced from 100ms to 30ms
         }
         
-        // Убираем линию через 1 секунду
+        // Clean up after animation
         setTimeout(() => {
-            document.querySelectorAll('.path-line').forEach(line => line.remove());
-        }, 800);
+            this.clearAllLightningEffects();
+        }, 700); // Reduced from 1500ms to 700ms
+    }
+    
+    // Draw lightning between two tiles
+    drawLightningLine(tile1, tile2) {
+        const gameBoard = document.getElementById('gameBoard');
+        const boardRect = gameBoard.getBoundingClientRect();
+        
+        // Calculate grid cell dimensions
+        const cellWidth = boardRect.width / 10; // 10 columns
+        const cellHeight = boardRect.height / 16; // 16 rows
+        
+        this.drawLightningSegment(
+            { row: tile1.row, col: tile1.col },
+            { row: tile2.row, col: tile2.col },
+            cellWidth, cellHeight, boardRect, 0
+        );
+        
+        // Clean up after animation
+        setTimeout(() => {
+            this.clearAllLightningEffects();
+        }, 600); // Reduced from 1200ms to 600ms
+    }
+    
+    // Draw a single lightning segment with energy effects
+    drawLightningSegment(from, to, cellWidth, cellHeight, boardRect, segmentIndex = 0) {
+        const isHorizontal = from.row === to.row;
+        const isVertical = from.col === to.col;
+        
+        if (isHorizontal) {
+            this.createHorizontalLightning(from, to, cellWidth, cellHeight, boardRect, segmentIndex);
+        } else if (isVertical) {
+            this.createVerticalLightning(from, to, cellWidth, cellHeight, boardRect, segmentIndex);
+        }
+    }
+    
+    // Create horizontal lightning bolt with effects
+    createHorizontalLightning(from, to, cellWidth, cellHeight, boardRect, segmentIndex) {
+        const startCol = Math.min(from.col, to.col);
+        const endCol = Math.max(from.col, to.col);
+        const row = from.row;
+        
+        const startX = startCol * cellWidth + cellWidth / 2;
+        const endX = endCol * cellWidth + cellWidth / 2;
+        const y = row * cellHeight + cellHeight / 2;
+        const length = endX - startX;
+        
+        // Create main lightning bolt
+        this.createLightningBolt(
+            boardRect.left + startX,
+            boardRect.top + y - 2,
+            length,
+            4,
+            0, // horizontal rotation
+            segmentIndex
+        );
+        
+        // Add jagged lightning effect
+        this.createJaggedLightning(
+            boardRect.left + startX,
+            boardRect.top + y,
+            length,
+            0,
+            segmentIndex
+        );
+        
+        // Add energy particles along the path
+        this.createEnergyParticles(
+            boardRect.left + startX,
+            boardRect.top + y,
+            length,
+            0,
+            segmentIndex
+        );
+    }
+    
+    // Create vertical lightning bolt with effects
+    createVerticalLightning(from, to, cellWidth, cellHeight, boardRect, segmentIndex) {
+        const startRow = Math.min(from.row, to.row);
+        const endRow = Math.max(from.row, to.row);
+        const col = from.col;
+        
+        const startY = startRow * cellHeight + cellHeight / 2;
+        const endY = endRow * cellHeight + cellHeight / 2;
+        const x = col * cellWidth + cellWidth / 2;
+        const length = endY - startY;
+        
+        // Create main lightning bolt
+        this.createLightningBolt(
+            boardRect.left + x - 2,
+            boardRect.top + startY,
+            length,
+            4,
+            90, // vertical rotation
+            segmentIndex
+        );
+        
+        // Add jagged lightning effect
+        this.createJaggedLightning(
+            boardRect.left + x,
+            boardRect.top + startY,
+            length,
+            90,
+            segmentIndex
+        );
+        
+        // Add energy particles along the path
+        this.createEnergyParticles(
+            boardRect.left + x,
+            boardRect.top + startY,
+            length,
+            90,
+            segmentIndex
+        );
+    }
+    
+    // Create the main lightning bolt element
+    createLightningBolt(x, y, length, thickness, rotation, segmentIndex) {
+        const container = document.createElement('div');
+        container.className = 'lightning-container';
+        
+        // Enhanced thickness for boldness
+        const boltThickness = thickness * 2; // Double the thickness
+        const coreThickness = Math.max(2, thickness * 0.6);
+        
+        // Main lightning bolt
+        const bolt = document.createElement('div');
+        bolt.className = 'lightning-bolt';
+        bolt.style.left = `${x}px`;
+        bolt.style.top = `${y}px`;
+        bolt.style.width = rotation === 90 ? `${boltThickness}px` : `${length}px`;
+        bolt.style.height = rotation === 90 ? `${length}px` : `${boltThickness}px`;
+        bolt.style.animationDelay = `${segmentIndex * 0.03}s`; // Reduced from 0.1s to 0.03s
+        
+        // Lightning core (bright white center)
+        const core = document.createElement('div');
+        core.className = 'lightning-core';
+        const coreOffset = (boltThickness - coreThickness) / 2;
+        core.style.left = `${x + (rotation === 90 ? coreOffset : 0)}px`;
+        core.style.top = `${y + (rotation === 90 ? 0 : coreOffset)}px`;
+        core.style.width = rotation === 90 ? `${coreThickness}px` : `${length}px`;
+        core.style.height = rotation === 90 ? `${length}px` : `${coreThickness}px`;
+        core.style.animationDelay = `${segmentIndex * 0.03 + 0.05}s`; // Much faster core flash
+        
+        // Enhanced glow effect
+        const glow = document.createElement('div');
+        glow.className = 'lightning-glow';
+        const glowSize = Math.max(24, boltThickness * 3);
+        const glowOffset = glowSize / 2;
+        glow.style.left = `${x - glowOffset + boltThickness/2}px`;
+        glow.style.top = `${y - glowOffset + boltThickness/2}px`;
+        glow.style.width = rotation === 90 ? `${glowSize}px` : `${length + glowSize}px`;
+        glow.style.height = rotation === 90 ? `${length + glowSize}px` : `${glowSize}px`;
+        glow.style.animationDelay = `${segmentIndex * 0.03}s`; // Faster glow timing
+        
+        container.appendChild(glow);
+        container.appendChild(bolt);
+        container.appendChild(core);
+        document.body.appendChild(container);
+    }
+    
+    // Create jagged lightning effects
+    createJaggedLightning(x, y, length, rotation, segmentIndex) {
+        const jaggedCount = Math.floor(length / 15) + 3; // More jagged segments for bolder effect
+        
+        for (let i = 0; i < jaggedCount; i++) {
+            const jagged = document.createElement('div');
+            jagged.className = 'lightning-jagged';
+            
+            const segmentLength = length / jaggedCount;
+            const offsetX = rotation === 90 ? 0 : i * segmentLength;
+            const offsetY = rotation === 90 ? i * segmentLength : 0;
+            const randomOffset = (Math.random() - 0.5) * 12; // Stronger random jagged effect
+            
+            jagged.style.left = `${x + offsetX + (rotation === 90 ? randomOffset : 0)}px`;
+            jagged.style.top = `${y + offsetY + (rotation === 90 ? 0 : randomOffset)}px`;
+            jagged.style.width = rotation === 90 ? '4px' : `${segmentLength + 2}px`; // Thicker jagged lines
+            jagged.style.height = rotation === 90 ? `${segmentLength + 2}px` : '4px';
+            jagged.style.animationDelay = `${segmentIndex * 0.03 + i * 0.01}s`; // Much faster jagged timing
+            jagged.style.transform = `rotate(${Math.random() * 10 - 5}deg) scale(${0.8 + Math.random() * 0.4})`; // More variation
+            
+            document.body.appendChild(jagged);
+        }
+    }
+    
+    // Create floating energy particles
+    createEnergyParticles(x, y, length, rotation, segmentIndex) {
+        const particleCount = Math.floor(length / 12) + 5; // Many more particles for bold effect
+        
+        for (let i = 0; i < particleCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'energy-particle';
+            
+            const progress = i / (particleCount - 1);
+            const offsetX = rotation === 90 ? 0 : progress * length;
+            const offsetY = rotation === 90 ? progress * length : 0;
+            
+            // Enhanced random position variation
+            const randomX = (Math.random() - 0.5) * 20;
+            const randomY = (Math.random() - 0.5) * 20;
+            
+            particle.style.left = `${x + offsetX + randomX}px`;
+            particle.style.top = `${y + offsetY + randomY}px`;
+            particle.style.animationDelay = `${segmentIndex * 0.03 + i * 0.02}s`; // Faster particle timing
+            
+            // Enhanced particle movement with more dramatic spread
+            const moveDistance = 60 + Math.random() * 40; // Larger movement range
+            const angle = Math.random() * Math.PI * 2; // Random direction
+            const moveX = Math.cos(angle) * moveDistance;
+            const moveY = Math.sin(angle) * moveDistance;
+            
+            particle.style.setProperty('--random-x', `${moveX}px`);
+            particle.style.setProperty('--random-y', `${moveY}px`);
+            
+            // Add size variation for more dramatic effect
+            const size = 4 + Math.random() * 4; // 4-8px particles
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            
+            document.body.appendChild(particle);
+        }
+        
+        // Add extra burst particles at the endpoints for dramatic effect
+        this.createBurstParticles(x, y, segmentIndex);
+        this.createBurstParticles(
+            x + (rotation === 90 ? 0 : length), 
+            y + (rotation === 90 ? length : 0), 
+            segmentIndex
+        );
+    }
+    
+    // Create dramatic burst particles at connection points
+    createBurstParticles(x, y, segmentIndex) {
+        const burstCount = 8;
+        
+        for (let i = 0; i < burstCount; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'energy-particle';
+            
+            const angle = (i / burstCount) * Math.PI * 2;
+            const distance = 30 + Math.random() * 30;
+            const moveX = Math.cos(angle) * distance;
+            const moveY = Math.sin(angle) * distance;
+            
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            particle.style.animationDelay = `${segmentIndex * 0.03 + 0.1 + i * 0.01}s`; // Faster burst timing
+            particle.style.setProperty('--random-x', `${moveX}px`);
+            particle.style.setProperty('--random-y', `${moveY}px`);
+            
+            // Larger burst particles
+            const size = 5 + Math.random() * 3;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+            
+            document.body.appendChild(particle);
+        }
+    }
+    
+    // Legacy function kept for compatibility
+    drawDirectLine(tile1, tile2) {
+        this.drawLightningLine(tile1, tile2);
     }
     
     showConnectionError() {
@@ -1281,8 +1843,8 @@ class PaoPaoGame {
         const tile1 = this.selectedTile;
         tile1.element.classList.remove('selected');
         
-        // Воспроизводим звук ошибки
-        this.playSound('wrong');
+        // Воспроизводим звук ошибки (с учетом фоновой музыки)  
+        this.playSoundOrHaptic('wrong', 'error');
         
         // Мигаем плиткой
         tile1.element.style.animation = 'shake 0.5s ease-in-out';

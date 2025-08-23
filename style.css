@@ -479,6 +479,310 @@ body {
     font-size: 1.3rem;
 }
 
+/* Lightning Energy Connection Line */
+.lightning-container {
+    position: absolute;
+    z-index: 1000;
+    pointer-events: none;
+    overflow: visible;
+}
+
+.lightning-bolt {
+    position: absolute;
+    background: linear-gradient(90deg, 
+        #ffffff 0%, 
+        #00ffff 15%, 
+        #0099ff 35%, 
+        #ffffff 50%, 
+        #0099ff 65%, 
+        #00ffff 85%, 
+        #ffffff 100%);
+    background-size: 400% 100%;
+    height: 8px;
+    border-radius: 4px;
+    box-shadow: 
+        0 0 15px #00ffff,
+        0 0 30px #0099ff,
+        0 0 45px #006699,
+        0 0 60px rgba(0, 153, 255, 0.4),
+        inset 0 0 8px rgba(255, 255, 255, 1),
+        inset 0 0 4px rgba(0, 255, 255, 0.8);
+    animation: lightningFlow 0.4s ease-out, lightningPulse 0.4s ease-out;
+    z-index: 1001;
+    filter: brightness(1.3) contrast(1.2);
+}
+
+.lightning-bolt::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(0, 255, 255, 0.3) 25%, 
+        rgba(255, 255, 255, 0.5) 50%, 
+        rgba(0, 255, 255, 0.3) 75%, 
+        transparent 100%);
+    border-radius: 6px;
+    z-index: -1;
+    animation: lightningHalo 0.4s ease-out;
+}
+
+.lightning-glow {
+    position: absolute;
+    background: radial-gradient(ellipse, 
+        rgba(0, 255, 255, 0.8) 0%, 
+        rgba(0, 153, 255, 0.6) 20%, 
+        rgba(0, 102, 204, 0.4) 40%, 
+        rgba(0, 51, 153, 0.2) 60%, 
+        transparent 80%);
+    height: 24px;
+    border-radius: 50%;
+    animation: glowPulse 0.3s ease-out;
+    z-index: 999;
+    filter: blur(1px);
+}
+
+/* Energy Particles */
+.energy-particle {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: radial-gradient(circle, 
+        #ffffff 0%, 
+        #00ffff 30%, 
+        #0099ff 60%, 
+        transparent 100%);
+    border-radius: 50%;
+    box-shadow: 
+        0 0 12px #00ffff,
+        0 0 20px #0099ff,
+        inset 0 0 4px rgba(255, 255, 255, 0.8);
+    animation: particleFloat 0.5s ease-out forwards;
+    z-index: 1002;
+}
+
+/* Lightning Core Effect */
+.lightning-core {
+    position: absolute;
+    background: linear-gradient(90deg, 
+        rgba(255, 255, 255, 0.9) 0%, 
+        rgba(255, 255, 255, 1) 50%, 
+        rgba(255, 255, 255, 0.9) 100%);
+    height: 3px;
+    border-radius: 1.5px;
+    z-index: 1004;
+    animation: coreFlash 0.3s ease-out;
+    filter: brightness(2);
+}
+
+/* Lightning Jagged Effect */
+.lightning-jagged {
+    position: absolute;
+    background: linear-gradient(45deg, 
+        rgba(255, 255, 255, 0.8) 0%, 
+        #00ffff 25%, 
+        #ffffff 50%, 
+        #00ffff 75%, 
+        rgba(255, 255, 255, 0.8) 100%);
+    height: 4px;
+    border-radius: 2px;
+    transform-origin: left center;
+    box-shadow: 
+        0 0 8px #00ffff,
+        0 0 16px rgba(0, 255, 255, 0.6);
+    animation: jaggedFlash 0.2s ease-out;
+    z-index: 1003;
+}
+
+/* Instant Lightning Flash */
+.lightning-instant-flash {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at var(--flash-x, 50%) var(--flash-y, 50%), 
+        rgba(0, 255, 255, 0.3) 0%, 
+        rgba(0, 255, 255, 0.1) 30%, 
+        transparent 60%);
+    pointer-events: none;
+    z-index: 2000;
+    animation: instantFlash 0.15s ease-out;
+}
+
+.tile-flash {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 4px;
+    box-shadow: 
+        0 0 20px #00ffff,
+        0 0 40px rgba(0, 255, 255, 0.8);
+    animation: tileFlash 0.2s ease-out;
+    z-index: 1500;
+    pointer-events: none;
+}
+
+/* Keyframe Animations */
+@keyframes lightningFlow {
+    0% {
+        background-position: -400% 0;
+        transform: scaleX(0) scaleY(0.5);
+        opacity: 0;
+        filter: brightness(1) contrast(1);
+    }
+    25% {
+        background-position: -100% 0;
+        transform: scaleX(0.7) scaleY(1.4);
+        opacity: 1;
+        filter: brightness(2.5) contrast(2);
+    }
+    50% {
+        background-position: 100% 0;
+        transform: scaleX(1) scaleY(1.2);
+        opacity: 1;
+        filter: brightness(3) contrast(2.2);
+    }
+    100% {
+        background-position: 400% 0;
+        transform: scaleX(1) scaleY(1);
+        opacity: 0.4;
+        filter: brightness(1.3) contrast(1.2);
+    }
+}
+
+@keyframes lightningPulse {
+    0% {
+        box-shadow: 
+            0 0 20px #00ffff,
+            0 0 40px #0099ff,
+            0 0 60px #006699,
+            0 0 80px rgba(0, 153, 255, 0.6),
+            inset 0 0 10px rgba(255, 255, 255, 1);
+    }
+    50% {
+        box-shadow: 
+            0 0 40px #00ffff,
+            0 0 80px #0099ff,
+            0 0 120px #006699,
+            0 0 160px rgba(0, 153, 255, 1),
+            inset 0 0 20px rgba(255, 255, 255, 1);
+    }
+    100% {
+        box-shadow: 
+            0 0 15px #00ffff,
+            0 0 30px #0099ff,
+            0 0 45px #006699,
+            0 0 60px rgba(0, 153, 255, 0.4),
+            inset 0 0 8px rgba(255, 255, 255, 1);
+    }
+}
+
+@keyframes lightningHalo {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    60% {
+        opacity: 1;
+        transform: scale(1.8);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(2.5);
+    }
+}
+
+@keyframes glowPulse {
+    0% {
+        transform: scale(0.2);
+        opacity: 0;
+    }
+    40% {
+        transform: scale(1.8);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+@keyframes coreFlash {
+    0% {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+    30% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+    100% {
+        opacity: 0.2;
+        transform: scaleX(1);
+    }
+}
+
+@keyframes particleFloat {
+    0% {
+        opacity: 1;
+        transform: translate(0, 0) scale(1.2) rotate(0deg);
+        filter: brightness(2);
+    }
+    60% {
+        opacity: 0.6;
+        transform: translate(calc(var(--random-x, 20px) * 0.8), calc(var(--random-y, -20px) * 0.8)) scale(0.8) rotate(300deg);
+        filter: brightness(1.5);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--random-x, 20px), var(--random-y, -20px)) scale(0.2) rotate(480deg);
+        filter: brightness(0.8);
+    }
+}
+
+@keyframes jaggedFlash {
+    0% {
+        opacity: 0;
+        transform: scaleX(0) scaleY(0.3);
+    }
+    50% {
+        opacity: 1;
+        transform: scaleX(1) scaleY(1.8);
+    }
+    100% {
+        opacity: 0;
+        transform: scaleX(1) scaleY(0.5);
+    }
+}
+
+@keyframes instantFlash {
+    0% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+@keyframes tileFlash {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(1.1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.2);
+    }
+}
+
+/* Legacy path-line styles for fallback */
 .path-line {
     position: absolute;
     background: #4299e1;
@@ -489,7 +793,6 @@ body {
     box-shadow: 0 0 4px rgba(66, 153, 225, 0.6);
 }
 
-/* Стили для путей через виртуальную доску */
 .path-line.behind-board {
     background: rgba(66, 153, 225, 0.6);
     z-index: 5;
