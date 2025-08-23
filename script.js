@@ -84,10 +84,26 @@ class PaoPaoGame {
     }
     
     initializeSounds() {
-        // Initialize Web Audio API for better control
-        this.initializeWebAudio();
+        // Detect iOS
+        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
         
-        // Инициализируем звуки с music-friendly настройками
+        // Audio modes: 'off', 'music+game' (vibro only), 'full' (stops music)
+        this.audioMode = this.isIOS ? 'music+game' : 'full';
+        this.audioContext = null;
+        this.sounds = {};
+        
+        // Don't initialize audio automatically on iOS
+        if (!this.isIOS) {
+            this.initializeAudioSystem();
+        }
+        
+        // Show audio choice UI if needed
+        this.setupAudioUI();
+    }
+    
+    initializeAudioSystem() {
+        // Create sounds objects
         this.sounds = {
             gameover: new Audio('sounds/gameover.mp3'),
             levelcomplited: new Audio('sounds/levelcomplited.mp3'),
@@ -100,32 +116,107 @@ class PaoPaoGame {
             click: new Audio('sounds/successstep.mp3'),
         };
         
-        // Configure sounds for music coexistence
-        this.configureSoundsForMusic();
+        // Configure sounds
+        Object.values(this.sounds).forEach(sound => {
+            sound.volume = 0.4;
+            sound.preload = 'auto';
+            sound.load();
+        });
         
-        // Detect if user is playing background music
-        this.detectBackgroundMusic();
+        // Initialize Web Audio if full sound mode
+        if (this.audioMode === 'full') {
+            this.initializeWebAudio();
+        }
+    }
+    
+    setupAudioUI() {
+        // Add audio mode selection for iOS
+        if (this.isIOS) {
+            this.createAudioModeSelector();
+        }
+        
+        // Listen for visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.suspendAudio();
+            } else {
+                this.resumeAudio();
+            }
+        });
+    }
+    
+    createAudioModeSelector() {
+        // Create audio mode selection overlay (shown on first interaction)
+        const overlay = document.createElement('div');
+        overlay.id = 'audioModeOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        `;
+        
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 90vw;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        `;
+        
+        modal.innerHTML = `
+            <h3 style="margin: 0 0 15px 0;">🎵 Режим звука</h3>
+            <p style="margin: 0 0 20px 0; color: var(--tg-theme-hint-color, #666);">
+                Выберите режим для комфортной игры:
+            </p>
+            <button id="musicGameMode" class="btn btn-primary" style="display: block; width: 100%; margin: 0 0 10px 0; padding: 15px;">
+                🎵 Музыка + Игра<br>
+                <small style="opacity: 0.7;">Тихая игра с вибрацией</small>
+            </button>
+            <button id="fullSoundMode" class="btn btn-secondary" style="display: block; width: 100%; padding: 15px;">
+                🔊 Полный звук<br>
+                <small style="opacity: 0.7;">Остановит фоновую музыку</small>
+            </button>
+        `;
+        
+        overlay.appendChild(modal);
+        document.body.appendChild(overlay);
+        
+        // Add event listeners
+        document.getElementById('musicGameMode').onclick = () => {
+            this.setAudioMode('music+game');
+            overlay.style.display = 'none';
+        };
+        
+        document.getElementById('fullSoundMode').onclick = () => {
+            this.setAudioMode('full');
+            overlay.style.display = 'none';
+        };
+        
+        // Show on first tile click if iOS
+        this.audioModeOverlay = overlay;
     }
     
     initializeWebAudio() {
-        // Detect iOS - Web Audio API causes music interruption on iOS
-        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
-                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-        
-        // Skip Web Audio API on iOS to prevent music interruption
-        if (this.isIOS) {
-            console.log('iOS detected - using HTML5 audio only to preserve background music');
-            this.audioContext = null;
+        // Only create Web Audio context in full sound mode
+        if (this.audioMode !== 'full') {
+            console.log('Not creating Web Audio context - not in full sound mode');
             return;
         }
         
         try {
-            // Only use Web Audio on non-iOS platforms
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.masterGain = this.audioContext.createGain();
             this.masterGain.connect(this.audioContext.destination);
             
-            // Create compressor to prevent clipping with background music
+            // Create compressor
             this.compressor = this.audioContext.createDynamicsCompressor();
             this.compressor.threshold.setValueAtTime(-24, this.audioContext.currentTime);
             this.compressor.knee.setValueAtTime(30, this.audioContext.currentTime);
@@ -135,10 +226,61 @@ class PaoPaoGame {
             
             this.compressor.connect(this.masterGain);
             
-            console.log('Web Audio initialized for music-friendly playback');
+            console.log('Web Audio initialized for full sound mode');
         } catch (e) {
-            console.log('Web Audio not available, using fallback audio system');
+            console.log('Web Audio not available:', e);
             this.audioContext = null;
+        }
+    }
+    
+    setAudioMode(mode) {
+        console.log(`Setting audio mode to: ${mode}`);
+        this.audioMode = mode;
+        
+        if (mode === 'full') {
+            // Initialize full audio system
+            if (Object.keys(this.sounds).length === 0) {
+                this.initializeAudioSystem();
+            }
+            if (!this.audioContext) {
+                this.initializeWebAudio();
+            }
+            this.soundEnabled = true;
+            
+        } else if (mode === 'music+game') {
+            // Close audio context to free audio session
+            if (this.audioContext) {
+                this.audioContext.close();
+                this.audioContext = null;
+            }
+            this.soundEnabled = false;
+            
+        } else if (mode === 'off') {
+            // Completely disable audio
+            if (this.audioContext) {
+                this.audioContext.close();
+                this.audioContext = null;
+            }
+            this.soundEnabled = false;
+        }
+        
+        // Update UI
+        this.updateSoundButton();
+    }
+    
+    suspendAudio() {
+        if (this.audioContext && this.audioContext.state === 'running') {
+            this.audioContext.suspend().then(() => {
+                console.log('Audio context suspended');
+            });
+        }
+    }
+    
+    resumeAudio() {
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            this.audioContext.resume().then(() => {
+                console.log('Audio context resumed');
+            });
         }
     }
     
@@ -449,29 +591,57 @@ class PaoPaoGame {
         }
     }
     
+    playGameSound(soundName) {
+        // Route to appropriate audio handling based on mode
+        if (this.audioMode === 'music+game') {
+            // Only haptic feedback in music+game mode
+            this.playHapticFeedback(soundName);
+            return;
+        } else if (this.audioMode === 'off') {
+            // No audio or haptic
+            return;
+        } else if (this.audioMode === 'full') {
+            // Full sound mode
+            this.playSound(soundName);
+        }
+    }
+    
+    playHapticFeedback(soundName) {
+        // Map sounds to appropriate haptic feedback
+        if (soundName === 'success') {
+            this.triggerHapticFeedback();
+        } else if (soundName === 'wrong') {
+            this.triggerWrongMoveHapticFeedback();
+        } else if (soundName === 'click') {
+            this.triggerSelectionHapticFeedback();
+        } else {
+            // Generic haptic for other sounds
+            if (tg && tg.HapticFeedback) {
+                tg.HapticFeedback.impactOccurred('light');
+            } else if ('vibrate' in navigator) {
+                navigator.vibrate(30);
+            }
+        }
+    }
+    
     playSound(soundName) {
-        if (this.soundEnabled && this.sounds[soundName]) {
-            const sound = this.sounds[soundName];
-            
-            // iOS-specific handling to preserve background music
-            if (this.isIOS) {
-                this.playIOSSafeSound(sound, soundName);
-                return;
-            }
-            
-            // Smart volume adjustment based on background music
-            this.adjustSoundForContext(sound, soundName);
-            
-            // Reset and play with music-friendly settings
-            sound.currentTime = 0;
-            
-            // Use Web Audio API if available for better control
-            if (this.audioContext && !this.hasMusicPlaying) {
-                this.playWithWebAudio(sound, soundName);
-            } else {
-                // Fallback to regular HTML5 audio with ducking
-                this.playWithDucking(sound, soundName);
-            }
+        if (this.audioMode !== 'full' || !this.sounds[soundName]) {
+            return;
+        }
+        
+        const sound = this.sounds[soundName];
+        
+        // Smart volume adjustment
+        this.adjustSoundForContext(sound, soundName);
+        
+        // Reset and play
+        sound.currentTime = 0;
+        
+        // Use Web Audio API if available for better control
+        if (this.audioContext) {
+            this.playWithWebAudio(sound, soundName);
+        } else {
+            this.playWithDucking(sound, soundName);
         }
     }
     
@@ -626,17 +796,46 @@ class PaoPaoGame {
     }
     
     toggleSound() {
-        this.soundEnabled = !this.soundEnabled;
-        const soundBtn = document.getElementById('soundBtn');
-        
-        if (this.soundEnabled) {
-            soundBtn.textContent = '🔊';
-            soundBtn.title = 'Sound On';
-            soundBtn.classList.remove('muted');
+        // Cycle through audio modes on iOS
+        if (this.isIOS) {
+            if (this.audioMode === 'music+game') {
+                this.setAudioMode('full');
+            } else if (this.audioMode === 'full') {
+                this.setAudioMode('off');
+            } else {
+                this.setAudioMode('music+game');
+            }
         } else {
-            soundBtn.textContent = '🔇';
-            soundBtn.title = 'Sound Off';
-            soundBtn.classList.add('muted');
+            // Simple toggle on other platforms
+            this.soundEnabled = !this.soundEnabled;
+        }
+        
+        this.updateSoundButton();
+    }
+    
+    updateSoundButton() {
+        const soundBtn = document.getElementById('soundBtn');
+        if (!soundBtn) return;
+        
+        if (this.isIOS) {
+            // Show current mode for iOS
+            if (this.audioMode === 'music+game') {
+                soundBtn.textContent = '🎵';
+                soundBtn.title = 'Музыка + Игра (вибрация)';
+                soundBtn.classList.remove('muted');
+            } else if (this.audioMode === 'full') {
+                soundBtn.textContent = '🔊';
+                soundBtn.title = 'Полный звук';
+                soundBtn.classList.remove('muted');
+            } else {
+                soundBtn.textContent = '🔇';
+                soundBtn.title = 'Звук выключен';
+                soundBtn.classList.add('muted');
+            }
+        } else {
+            // Standard behavior for other platforms
+            soundBtn.textContent = this.soundEnabled ? '🔊' : '🔇';
+            soundBtn.classList.toggle('muted', !this.soundEnabled);
         }
     }
     
@@ -896,14 +1095,20 @@ class PaoPaoGame {
     }
 
     handleTileClick(row, col) {
+        // Show audio mode selector on first click for iOS
+        if (this.isIOS && !this.audioModeSelected && this.audioModeOverlay) {
+            this.audioModeOverlay.style.display = 'flex';
+            this.audioModeSelected = true;
+            return;
+        }
+        
         if (this.isGameOver || this.isPaused || this.isShuffling || this.isSolving) return;
-
 
         const tile = this.board[row][col];
         if (!tile || tile.matched) return;
         
-        // Воспроизводим звук клика
-        this.playSound('click');
+        // Воспроизводим звук клика (зависит от режима)
+        this.playGameSound('click');
         
         console.log('Tile clicked:', { row, col, tileId: tile.id, matched: tile.matched });
         
@@ -1376,8 +1581,8 @@ class PaoPaoGame {
         this.score += 10;
         this.updateScore();
         
-        // Воспроизводим звук успеха (с учетом фоновой музыки)
-        this.playSoundOrHaptic('success', 'success');
+        // Воспроизводим звук успеха (зависит от режима)
+        this.playGameSound('success');
         
         // Haptic feedback for successful match
         this.triggerHapticFeedback();
@@ -1949,8 +2154,8 @@ class PaoPaoGame {
         const tile1 = this.selectedTile;
         tile1.element.classList.remove('selected');
         
-        // Воспроизводим звук ошибки (с учетом фоновой музыки)  
-        this.playSoundOrHaptic('wrong', 'error');
+        // Воспроизводим звук ошибки (зависит от режима)  
+        this.playGameSound('wrong');
         
         // Мигаем плиткой
         tile1.element.style.animation = 'shake 0.5s ease-in-out';
