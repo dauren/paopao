@@ -108,8 +108,19 @@ class PaoPaoGame {
     }
     
     initializeWebAudio() {
+        // Detect iOS - Web Audio API causes music interruption on iOS
+        this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || 
+                    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        
+        // Skip Web Audio API on iOS to prevent music interruption
+        if (this.isIOS) {
+            console.log('iOS detected - using HTML5 audio only to preserve background music');
+            this.audioContext = null;
+            return;
+        }
+        
         try {
-            // Create Web Audio context for advanced control
+            // Only use Web Audio on non-iOS platforms
             this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
             this.masterGain = this.audioContext.createGain();
             this.masterGain.connect(this.audioContext.destination);
@@ -133,26 +144,66 @@ class PaoPaoGame {
     
     configureSoundsForMusic() {
         Object.values(this.sounds).forEach(sound => {
-            // Lower volumes to not compete with music
-            sound.volume = this.hasMusicPlaying ? 0.25 : 0.35;
+            // iOS-specific configuration to preserve background music
+            if (this.isIOS) {
+                // Very low volumes on iOS to minimize interference
+                sound.volume = 0.15;
+                
+                // Configure for background music preservation
+                sound.preload = 'none'; // Don't preload on iOS
+                sound.muted = false;
+                
+                // Set audio category hints for iOS (though limited in web)
+                if (sound.setSinkId) {
+                    try {
+                        sound.setSinkId(''); // Use default audio output
+                    } catch (e) {
+                        // Ignore if not supported
+                    }
+                }
+            } else {
+                // Standard configuration for other platforms
+                sound.volume = this.hasMusicPlaying ? 0.25 : 0.35;
+                sound.preload = 'auto';
+            }
             
-            // Prevent sounds from interrupting music
-            sound.preload = 'auto';
-            
-            // Load sounds
-            sound.load();
+            // Load sounds (but only if not iOS or not preloading)
+            if (!this.isIOS) {
+                sound.load();
+            }
             
             // Add event listeners for music detection
             sound.addEventListener('play', () => {
                 this.onSoundPlay(sound);
             });
+            
+            // iOS-specific: Monitor for interruptions
+            if (this.isIOS) {
+                sound.addEventListener('pause', () => {
+                    // If game sound gets paused, it might be due to system audio management
+                    console.log('Game sound paused - likely due to system audio management');
+                });
+                
+                sound.addEventListener('ended', () => {
+                    // Clean up after sound ends
+                    this.currentGameSound = null;
+                });
+            }
         });
     }
     
     detectBackgroundMusic() {
-        this.hasMusicPlaying = false;
+        // On iOS, always assume music is playing to be safe
+        this.hasMusicPlaying = this.isIOS ? true : false;
         
-        // Method 1: Check for Web Audio API usage by other apps
+        if (this.isIOS) {
+            console.log('iOS detected - assuming background music is playing');
+            this.adjustForBackgroundMusic(true);
+            this.checkTelegramAudioSettings();
+            return;
+        }
+        
+        // Method 1: Check for Web Audio API usage by other apps (non-iOS only)
         if (this.audioContext) {
             // Monitor audio context state changes
             this.audioContext.addEventListener('statechange', () => {
@@ -402,6 +453,12 @@ class PaoPaoGame {
         if (this.soundEnabled && this.sounds[soundName]) {
             const sound = this.sounds[soundName];
             
+            // iOS-specific handling to preserve background music
+            if (this.isIOS) {
+                this.playIOSSafeSound(sound, soundName);
+                return;
+            }
+            
             // Smart volume adjustment based on background music
             this.adjustSoundForContext(sound, soundName);
             
@@ -415,6 +472,37 @@ class PaoPaoGame {
                 // Fallback to regular HTML5 audio with ducking
                 this.playWithDucking(sound, soundName);
             }
+        }
+    }
+    
+    playIOSSafeSound(sound, soundName) {
+        try {
+            // iOS-specific configuration for each play
+            sound.volume = 0.1; // Very low volume to minimize interference
+            sound.currentTime = 0;
+            
+            // Load only when needed on iOS
+            if (sound.readyState === 0) {
+                sound.load();
+            }
+            
+            // Play with iOS-safe settings
+            const playPromise = sound.play();
+            
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        console.log(`iOS-safe sound played: ${soundName}`);
+                        this.currentGameSound = sound;
+                    })
+                    .catch(error => {
+                        console.log(`iOS sound play failed: ${error.message}`);
+                        // Don't retry on iOS - just fail silently to preserve music
+                    });
+            }
+        } catch (error) {
+            console.log(`iOS sound error: ${error.message}`);
+            // Fail silently on iOS to preserve background music
         }
     }
     
@@ -502,6 +590,24 @@ class PaoPaoGame {
     
     // Enhanced sound method that prioritizes haptic feedback when music is detected
     playSoundOrHaptic(soundName, hapticType = 'light') {
+        // On iOS, prioritize haptic feedback over sound to preserve background music
+        if (this.isIOS) {
+            // Play haptic feedback first
+            if (soundName === 'success') {
+                this.triggerHapticFeedback();
+            } else if (soundName === 'wrong') {
+                this.triggerWrongMoveHapticFeedback();
+            } else {
+                this.triggerGameEventHapticFeedback(hapticType);
+            }
+            
+            // Optionally play very quiet sound if user has sounds enabled
+            if (this.soundEnabled) {
+                this.playSound(soundName);
+            }
+            return;
+        }
+        
         // If music is playing and we prefer haptic, use haptic instead of sound
         if (this.hasMusicPlaying && this.preferHapticOverAudio) {
             this.triggerGameEventHapticFeedback(hapticType);
