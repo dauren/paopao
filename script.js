@@ -93,7 +93,6 @@ class PaoPaoGame {
             success: new Audio('sounds/successstep.mp3'),
             wrong: new Audio('sounds/wrongstep.mp3'),
             victory: new Audio('sounds/victory.mp3'),
-            // shuffle: new Audio('sounds/shuffle.wma'), // Убираем shuffle звук, так как он может быть раздражающим
             shuffle: new Audio('sounds/shuffle.mp3'),
             click: new Audio('sounds/successstep.mp3'), // Используем существующий звук для клика
         };
@@ -136,10 +135,6 @@ class PaoPaoGame {
             // Use selection changed for tile selection
             tg.HapticFeedback.selectionChanged();
         }
-        // Fallback to light impact for selection
-        else if (tg && tg.HapticFeedback) {
-            tg.HapticFeedback.impactOccurred('light');
-        }
         // Fallback to native haptic feedback
         else if ('vibrate' in navigator) {
             // Very short vibration for selection
@@ -153,10 +148,6 @@ class PaoPaoGame {
         if (tg && tg.HapticFeedback) {
             // Use error notification for wrong moves
             tg.HapticFeedback.notificationOccurred('error');
-        }
-        // Fallback to heavy impact for wrong moves
-        else if (tg && tg.HapticFeedback) {
-            tg.HapticFeedback.impactOccurred('heavy');
         }
         // Fallback to native haptic feedback
         else if ('vibrate' in navigator) {
@@ -475,19 +466,8 @@ class PaoPaoGame {
     renderBoard() {
         const gameBoard = document.getElementById('gameBoard');
         gameBoard.innerHTML = '';
-        
-        // Responsive tile sizing based on screen width
-        let tileWidth, tileHeight;
-        if (window.innerWidth < 932) {
-            tileWidth = 36; // Larger tiles for small screens (was 32)
-            tileHeight = 45; // Larger tiles for small screens (was 40)
-        } else {
-            tileWidth = 40; // Standard tiles for larger screens
-            tileHeight = 50;
-        }
-        
-        
-        // Рендерим полную доску 10x16 (включая виртуальные области)
+
+        // Рендерим полную доску 16×10 используя CSS Grid
         for (let r = 0; r < this.boardSize.rows; r++) {
             for (let c = 0; c < this.boardSize.cols; c++) {
                 const tile = this.board[r][c];
@@ -498,18 +478,11 @@ class PaoPaoGame {
                 tileElement.dataset.row = r; // координаты в полной сетке
                 tileElement.dataset.col = c;
                 
-                // Координаты относительно полной доски 
-                // 10x16
-                const left = c * tileWidth;
-                const top = r * tileHeight;
+                // CSS Grid positioning (1-based indexing)
+                tileElement.style.gridColumn = `${c + 1}`;
+                tileElement.style.gridRow = `${r + 1}`;
                 
-                // Фиксированный размер и позиция
-                tileElement.style.width = `${tileWidth}px`;
-                tileElement.style.height = `${tileHeight}px`;
-                tileElement.style.left = `${left}px`;
-                tileElement.style.top = `${top}px`;
-                
-                // Добавляем специальные классы для виртуальных областей
+                // Добавляем специальные классы для виртуальных областей (outer border)
                 if (r < this.innerOffset.row || r >= this.innerOffset.row + this.innerSize.rows ||
                     c < this.innerOffset.col || c >= this.innerOffset.col + this.innerSize.cols) {
                     tileElement.classList.add('virtual-tile');
@@ -528,8 +501,8 @@ class PaoPaoGame {
                     tileElement.appendChild(img);
                 }
                 
-                // Добавляем обработчик клика только для тайлов с изображениями
-                if (tile.image && !tile.matched && !tile.disappearing) {
+                // Добавляем обработчик клика только для тайлов с изображениями и не матченых тайлов
+                if (tile.image && !tile.matched) {
                     tileElement.addEventListener('click', () => this.handleTileClick(tile.row, tile.col));
                 }
                 
@@ -592,6 +565,7 @@ class PaoPaoGame {
     }
     
     canConnect(tile1, tile2) {
+        if (!tile1 || !tile2) return false;
         if (tile1.id !== tile2.id) return false;
         console.log(`Checking connection between tiles at (${tile1.row},${tile1.col}) and (${tile2.row},${tile2.col})`);
         
@@ -1031,9 +1005,10 @@ class PaoPaoGame {
         this.playSound('success');
         
         // Haptic feedback for successful match
-        this.triggerMatchHapticFeedback();
+        this.triggerHapticFeedback();
         
         // Проверяем, закончилась ли игра
+        console.log('Calling checkGameEnd from connectTiles');
         this.checkGameEnd();
         
         // Проверяем наличие доступных ходов только если игра не закончена
@@ -1088,15 +1063,7 @@ class PaoPaoGame {
             return;
         }
         
-        // Если путь найден через L-образную проверку, рисуем его пошагово
         if (this.path && this.path.length > 0) {
-            // // Проверяем, является ли это L-образным путем
-            // const isLShape = this.isLShapePath();
-            // if (isLShape) {
-            //     this.drawLShapePath();
-            // } else {
-            //     this.drawPathThroughEmptyCells();
-            // }
             this.drawPathThroughEmptyCells();
         } else {
             // Если путь не найден, рисуем прямую линию между плитками
@@ -1135,16 +1102,11 @@ class PaoPaoGame {
     // Рисуем путь через пустые клетки (теперь для полной доски 10x16, строго по сетке)
     drawPathThroughEmptyCells() {
         const gameBoard = document.getElementById('gameBoard');
+        const boardRect = gameBoard.getBoundingClientRect();
         
-        // Responsive tile sizing based on screen width
-        let tileWidth, tileHeight;
-        if (window.innerWidth < 932) {
-            tileWidth = 36; // Larger tiles for small screens (was 32)
-            tileHeight = 45; // Larger tiles for small screens (was 40)
-        } else {
-            tileWidth = 40; // Standard tiles for larger screens
-            tileHeight = 50;
-        }
+        // Calculate grid cell dimensions
+        const cellWidth = boardRect.width / 10; // 10 columns
+        const cellHeight = boardRect.height / 16; // 16 rows
         
         // Рисуем линии между последовательными точками пути строго по сетке
         for (let i = 0; i < this.path.length - 1; i++) {
@@ -1157,10 +1119,10 @@ class PaoPaoGame {
             
             if (isHorizontal) {
                 // Горизонтальная линия
-                this.drawHorizontalLine(current, next, tileWidth, tileHeight);
+                this.drawHorizontalLineGrid(current, next, cellWidth, cellHeight, boardRect);
             } else if (isVertical) {
                 // Вертикальная линия
-                this.drawVerticalLine(current, next, tileWidth, tileHeight);
+                this.drawVerticalLineGrid(current, next, cellWidth, cellHeight, boardRect);
             }
         }
         
@@ -1169,51 +1131,7 @@ class PaoPaoGame {
         }, 1200);
     }
     
-    // Рисуем L-образный путь пошагово через каждую клетку (только по столбцам и строкам)
-    drawLShapePath() {
-        if (!this.path || this.path.length < 2) return;
-        
-        const gameBoard = document.getElementById('gameBoard');
-        
-        // Responsive tile sizing based on screen width
-        let tileWidth, tileHeight;
-        if (window.innerWidth < 932) {
-            tileWidth = 36; // Larger tiles for small screens (was 32)
-            tileHeight = 45; // Larger tiles for small screens (was 40)
-        } else {
-            tileWidth = 40; // Standard tiles for larger screens
-            tileHeight = 50;
-        }
-        
-        const toPixel = (row, col) => {
-            // Теперь используем координаты полной доски 10x16
-            const x = col * tileWidth + tileWidth / 2;
-            const y = row * tileHeight + tileHeight / 2;
-            return { x, y };
-        };
-        
-        // Рисуем линии между последовательными точками пути строго по сетке
-        for (let i = 0; i < this.path.length - 1; i++) {
-            const current = this.path[i];
-            const next = this.path[i + 1];
-            
-            // Определяем направление движения
-            const isHorizontal = current.row === next.row;
-            const isVertical = current.col === next.col;
-            
-            if (isHorizontal) {
-                // Горизонтальная линия
-                this.drawHorizontalLine(current, next, tileWidth, tileHeight);
-            } else if (isVertical) {
-                // Вертикальная линия
-                this.drawVerticalLine(current, next, tileWidth, tileHeight);
-            }
-        }
-        
-        setTimeout(() => {
-            document.querySelectorAll('.path-line').forEach(line => line.remove());
-        }, 1200);
-    }
+    
     
     // Рисуем горизонтальную линию
     drawHorizontalLine(from, to, tileWidth, tileHeight) {
@@ -1239,6 +1157,34 @@ class PaoPaoGame {
         line.style.transform = 'none'; // Без поворота для горизонтальной линии
         
         gameBoard.appendChild(line);
+    }
+    
+    // Рисуем горизонтальную линию для CSS Grid
+    drawHorizontalLineGrid(from, to, cellWidth, cellHeight, boardRect) {
+        const startCol = Math.min(from.col, to.col);
+        const endCol = Math.max(from.col, to.col);
+        const row = from.row;
+        
+        const startX = startCol * cellWidth + cellWidth / 2;
+        const endX = endCol * cellWidth + cellWidth / 2;
+        const y = row * cellHeight + cellHeight / 2;
+        
+        const length = endX - startX;
+        
+        const line = document.createElement('div');
+        line.className = 'path-line';
+        line.style.position = 'fixed';
+        line.style.left = `${boardRect.left + startX}px`;
+        line.style.top = `${boardRect.top + y - 1.5}px`;
+        line.style.width = `${length}px`;
+        line.style.height = '3px';
+        line.style.background = '#4299e1';
+        line.style.borderRadius = '2px';
+        line.style.zIndex = '1000';
+        line.style.boxShadow = '0 0 4px rgba(66, 153, 225, 0.6)';
+        line.style.pointerEvents = 'none';
+        
+        document.body.appendChild(line);
     }
     
     // Рисуем вертикальную линию
@@ -1267,43 +1213,60 @@ class PaoPaoGame {
         gameBoard.appendChild(line);
     }
     
-    // Проверяем, находится ли позиция внутри внутренней (игровой) области 16x9
-    isPositionInGameBoard(row, col) {
-        return row >= this.innerOffset.row && row < this.innerOffset.row + this.innerSize.rows &&
-               col >= this.innerOffset.col && col < this.innerOffset.col + this.innerSize.cols;
+    // Рисуем вертикальную линию для CSS Grid
+    drawVerticalLineGrid(from, to, cellWidth, cellHeight, boardRect) {
+        const startRow = Math.min(from.row, to.row);
+        const endRow = Math.max(from.row, to.row);
+        const col = from.col;
+        
+        const startY = startRow * cellHeight + cellHeight / 2;
+        const endY = endRow * cellHeight + cellHeight / 2;
+        const x = col * cellWidth + cellWidth / 2;
+        
+        const length = endY - startY;
+        
+        const line = document.createElement('div');
+        line.className = 'path-line';
+        line.style.position = 'fixed';
+        line.style.left = `${boardRect.left + x - 1.5}px`;
+        line.style.top = `${boardRect.top + startY}px`;
+        line.style.width = '3px';
+        line.style.height = `${length}px`;
+        line.style.background = '#4299e1';
+        line.style.borderRadius = '2px';
+        line.style.zIndex = '1000';
+        line.style.boxShadow = '0 0 4px rgba(66, 153, 225, 0.6)';
+        line.style.pointerEvents = 'none';
+        
+        document.body.appendChild(line);
     }
     
-    // Рисуем прямую линию между плитками (строго по сетке)
+    // Рисуем прямую линию между плитками для CSS Grid
     drawDirectLine(tile1, tile2) {
         const gameBoard = document.getElementById('gameBoard');
+        const boardRect = gameBoard.getBoundingClientRect();
+        
+        // Calculate grid cell dimensions
+        const cellWidth = boardRect.width / 10; // 10 columns
+        const cellHeight = boardRect.height / 16; // 16 rows
         
         // Определяем направление движения
         const isHorizontal = tile1.row === tile2.row;
         const isVertical = tile1.col === tile2.col;
         
-        // Responsive tile sizing based on screen width
-        let tileWidth, tileHeight;
-        if (window.innerWidth < 932) {
-            tileWidth = 36; // Larger tiles for small screens (was 32)
-            tileHeight = 45; // Larger tiles for small screens (was 40)
-        } else {
-            tileWidth = 40; // Standard tiles for larger screens
-            tileHeight = 50;
-        }
-        
         if (isHorizontal) {
             // Горизонтальная линия
-            this.drawHorizontalLine(
+            this.drawHorizontalLineGrid(
                 { row: tile1.row, col: tile1.col },
                 { row: tile2.row, col: tile2.col },
-                tileWidth, tileHeight
+                cellWidth, cellHeight, boardRect
             );
         } else if (isVertical) {
             // Вертикальная линия
-            this.drawVerticalLine(
+            this.drawVerticalLineGrid(
                 { row: tile1.row, col: tile1.col },
                 { row: tile2.row, col: tile2.col },
-                tileWidth, tileHeight
+                cellWidth, cellHeight, boardRect
             );
         }
         
@@ -1311,14 +1274,6 @@ class PaoPaoGame {
         setTimeout(() => {
             document.querySelectorAll('.path-line').forEach(line => line.remove());
         }, 800);
-    }
-    
-    isPathThroughVirtualBoard(tile1, tile2) {
-        // Проверяем, идет ли путь через виртуальную доску
-        return this.canConnectThroughVirtualBoard(tile1, tile2) && 
-               !this.canConnectDirect(tile1, tile2) && 
-               !this.canConnectWithOneTurn(tile1, tile2) && 
-               !this.canConnectWithTwoTurns(tile1, tile2);
     }
     
     showConnectionError() {
@@ -1412,7 +1367,7 @@ class PaoPaoGame {
     }
     
     gainHearts(count) {
-        this.hearts = Math.min(this.maxHearts, this.hearts + count);
+        this.hearts = this.hearts + count;
         this.updateHearts();
     }
     
@@ -1425,19 +1380,49 @@ class PaoPaoGame {
     }
     
     checkGameEnd() {
+        console.log('=== CHECKING GAME END ===');
         // Проверяем, остались ли несовмещенные плитки на доске
+        let unmatched = 0;
+        let totalTiles = 0;
+        let matchedTiles = 0;
+        let nullTiles = 0;
+        
+        console.log(`Checking game end - innerOffset: (${this.innerOffset.row},${this.innerOffset.col}), innerSize: ${this.innerSize.rows}x${this.innerSize.cols}`);
+        
         for (let r = this.innerOffset.row; r < this.innerOffset.row + this.innerSize.rows; r++) {
             for (let c = this.innerOffset.col; c < this.innerOffset.col + this.innerSize.cols; c++) {
                 const t = this.board[r]?.[c];
-                if (t && !t.matched) return; // есть еще живые тайлы
+                totalTiles++;
+                
+                if (!t) {
+                    nullTiles++;
+                    console.log(`Null tile at (${r},${c})`);
+                } else {
+                    console.log(`Tile at (${r},${c}): id=${t.id}, matched=${t.matched}`);
+                    if (t.matched) {
+                        matchedTiles++;
+                    } else if (t.id) {
+                        unmatched++;
+                        console.log(`*** UNMATCHED TILE at (${r},${c}): id=${t.id}, matched=${t.matched} ***`);
+                    }
+                }
             }
         }
         
+        console.log(`SUMMARY: Total=${totalTiles}, Null=${nullTiles}, Matched=${matchedTiles}, Unmatched=${unmatched}`);
+        
+        if (unmatched > 0) {
+            console.log(`Level NOT completed - ${unmatched} unmatched tiles remaining`);
+            return; // есть еще живые тайлы
+        }
+        
         // Level completed!
+        console.log('*** LEVEL COMPLETED! ***');
         this.levelCompleted();
     }
     
     levelCompleted() {
+        console.log('*** LEVEL COMPLETED FUNCTION CALLED ***');
         this.isGameOver = true; // Mark as game over to prevent further move checking
         
         this.playSound('levelcomplited');
@@ -1849,9 +1834,6 @@ class PaoPaoGame {
         
         this.isShuffling = true;
         try {
-            // Lose a heart for shuffling
-            this.loseHeart();
-            
             const cells = [];
             for (let r = this.innerOffset.row; r < this.innerOffset.row + this.innerSize.rows; r++) {
                 for (let c = this.innerOffset.col; c < this.innerOffset.col + this.innerSize.cols; c++) {
@@ -2158,119 +2140,7 @@ class PaoPaoGame {
             }
         }
     }
-    
-    gainHearts(count) {
-        this.hearts = Math.min(this.maxHearts, this.hearts + count);
-        this.updateHearts();
-    }
-    
-    checkHearts() {
-        if (this.hearts <= 0) {
-            this.gameOver('No more hearts!');
-            return false;
-        }
-        return true;
-    }
 
-    // Специальная проверка для L-образных путей (более эффективна для диагональных расположений)
-    canConnectLShape(tile1, tile2) {
-        if (tile1.id !== tile2.id) return false;
-        
-        const rowDiff = Math.abs(tile1.row - tile2.row);
-        const colDiff = Math.abs(tile1.col - tile2.col);
-        
-        // L-образный путь возможен только если тайлы не на одной линии
-        if (rowDiff === 0 || colDiff === 0) return false;
-        
-        // Проверяем два возможных L-образных пути:
-        // 1) Сначала по горизонтали, потом по вертикали
-        const path1 = this.checkLPath(tile1, tile2, 'horizontal');
-        if (path1) {
-            this.path = path1;
-            return true;
-        }
-        
-        // 2) Сначала по вертикали, потом по горизонтали
-        const path2 = this.checkLPath(tile1, tile2, 'vertical');
-        if (path2) {
-            this.path = path2;
-            return true;
-        }
-        
-        return false;
-    }
-    
-    // Проверяет конкретный L-образный путь
-    checkLPath(tile1, tile2, firstDirection) {
-        const path = [];
-        
-        if (firstDirection === 'horizontal') {
-            // Сначала идем по горизонтали
-            const startCol = Math.min(tile1.col, tile2.col);
-            const endCol = Math.max(tile1.col, tile2.col);
-            const row = tile1.row;
-            
-            // Проверяем горизонтальный участок и добавляем промежуточные точки
-            for (let col = startCol; col <= endCol; col++) {
-                if (col === tile1.col || col === tile2.col) continue; // Пропускаем сами тайлы
-                if (!this.isCellEmpty(row, col)) return null; // Путь заблокирован
-                path.push({ row, col });
-            }
-            
-            // Потом идем по вертикали
-            const startRow = Math.min(tile1.row, tile2.row);
-            const endRow = Math.max(tile1.row, tile2.row);
-            const col = tile2.col;
-            
-            // Проверяем вертикальный участок и добавляем промежуточные точки
-            for (let row = startRow; row <= endRow; row++) {
-                if (row === tile1.row || row === tile2.row) continue; // Пропускаем сами тайлы
-                if (!this.isCellEmpty(row, col)) return null; // Путь заблокирован
-                path.push({ row, col });
-            }
-        } else {
-            // Сначала идем по вертикали
-            const startRow = Math.min(tile1.row, tile2.row);
-            const endRow = Math.max(tile1.row, tile2.row);
-            const col = tile1.col;
-            
-            // Проверяем вертикальный участок и добавляем промежуточные точки
-            for (let row = startRow; row <= endRow; row++) {
-                if (row === tile1.row || row === tile2.row) continue; // Пропускаем сами тайлы
-                if (!this.isCellEmpty(row, col)) return null; // Путь заблокирован
-                path.push({ row, col });
-            }
-            
-            // Потом идем по горизонтали
-            const startCol = Math.min(tile1.col, tile2.col);
-            const endCol = Math.max(tile1.col, tile2.col);
-            const row = tile2.row;
-            
-            // Проверяем горизонтальный участок и добавляем промежуточные точки
-            for (let col = startCol; col <= endCol; col++) {
-                if (col === tile1.col || col === tile2.col) continue; // Пропускаем сами тайлы
-                if (!this.isCellEmpty(row, col)) return null; // Путь заблокирован
-                path.push({ row, col });
-            }
-        }
-        
-        // Создаем L-образный путь с корректной угловой точкой
-        const fullPath = [];
-        fullPath.push({ row: tile1.row, col: tile1.col });
-        
-        // Добавляем угловую точку для L-образного пути
-        if (firstDirection === 'horizontal') {
-            // Горизонтально, затем вертикально: угол в (tile1.row, tile2.col)
-            fullPath.push({ row: tile1.row, col: tile2.col });
-        } else {
-            // Вертикально, затем горизонтально: угол в (tile2.row, tile1.col)
-            fullPath.push({ row: tile2.row, col: tile1.col });
-        }
-        
-        fullPath.push({ row: tile2.row, col: tile2.col });
-        
-        return fullPath;
-    }
 
     // Game over scenarios (hearts <= 0, time over, no moves)
     gameOver(reason = 'Game Over') {
@@ -2371,25 +2241,33 @@ class PaoPaoGame {
         // Check if there are any available connections
         if (!this.existsAnyConnection()) {
             console.log('No moves available - auto shuffling...');
-            
             // Check if we have enough hearts for shuffling
             if (this.hearts <= 0) {
                 this.gameOver('No more hearts!');
                 return;
             }
+            // Keep shuffling until connections are available or we run out of hearts
+            let shuffleAttempts = 0;
+            const maxShuffleAttempts = 10; // Prevent infinite loops
             
-            // Auto-shuffle
-            this.shuffleRemainingTiles();
-            
-            // After shuffling, check again
-            if (!this.existsAnyConnection()) {
-                // If still no moves after shuffle, game over
-                this.gameOver('No possible moves!');
+            while (!this.existsAnyConnection() && shuffleAttempts < maxShuffleAttempts) {
+                console.log(`Shuffle attempt ${shuffleAttempts + 1}`);
+                this.shuffleRemainingTiles();
+                shuffleAttempts++;
             }
+            
+            // Final check - if still no moves after maximum shuffles, game over
+            if (!this.existsAnyConnection()) {
+                console.log(`No moves found after ${shuffleAttempts} shuffle attempts`);
+                this.gameOver('No possible moves!');
+            } else {
+                // Lose a heart after shuffling
+                this.loseHeart();
+                console.log(`Found moves after ${shuffleAttempts} shuffle attempts`);
+            }
+
         }
     }
-
-    // BFS pathfinding is now used exclusively for all connection types
 }
 
 // Добавляем CSS анимации

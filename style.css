@@ -117,7 +117,7 @@ body {
     background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     overflow: hidden;
-    position: relative;
+  /*  position: relative;*/
     min-width: 0;
     flex-shrink: 1;
 }
@@ -153,26 +153,30 @@ body {
 }
 
 .game-board {
-    /* Responsive size that adapts to window */
-    width: min(90vw, 440px); /* Responsive width with max of 440px */
-    height: min(80vh, 900px); /* Responsive height with max of 900px */
+    /* CSS Grid layout for 16 rows × 10 columns */
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    grid-template-rows: repeat(16, 1fr);
+    gap: 1px;
+    width: min(90vw, 400px);
+    height: min(80vh, 640px);
     background: transparent;
-    padding: 0;
-    margin: 0;
-    box-shadow: none;
-    position: relative;
-    font-size: 0;
-    line-height: 0;
-    overflow: hidden;
+    padding: 2px;
+    margin: 0 auto;
+    border-radius: 8px;
     flex: 1;
     align-self: center;
+    /* Ensure grid maintains aspect ratio */
+    aspect-ratio: 10 / 16;
 }
 
-/* Responsive tile sizing */
+/* Responsive adjustments */
 @media (max-width: 931px) {
     .game-board {
-        width: min(95vw, 360px); /* 10 columns × 36px */
-        height: min(85vh, 720px); /* 16 rows × 45px */
+        width: min(95vw, 360px);
+        height: min(85vh, 576px);
+        gap: 0.5px;
+        padding: 1px;
     }
     
     .game-info,
@@ -190,24 +194,24 @@ body {
 }
 
 .tile {
-    /* Compact tiles for mobile */
-    width: 40px;
-    height: 50px;
+    /* CSS Grid positioned tiles */
     background: white;
     border: 1px solid #cbd5e0;
-    border-radius: 0;
+    border-radius: 4px;
     cursor: pointer;
     transition: all 0.15s ease;
     display: flex;
     justify-content: center;
     align-items: center;
-    position: absolute;
     overflow: hidden;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
     line-height: 0;
     font-size: 0;
+    /* Grid positioning will be set via JavaScript */
+    min-height: 0;
+    min-width: 0;
 }
 
 .tile.empty {
